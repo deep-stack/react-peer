@@ -31,7 +31,7 @@ To use react-peer package in react applications during development:
   yarn link
   ```
 
-- Register react library for yarn link to avoid dupplicate react library issues
+- Register react library for yarn link to avoid duplicate react library issues
 
   ```bash
   cd node_modules/react
