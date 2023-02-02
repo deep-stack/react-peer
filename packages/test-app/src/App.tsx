@@ -8,12 +8,13 @@ import { AppBar, Box, CssBaseline, Paper, Table, TableBody, TableCell, TableCont
 import './App.css';
 import { useForceUpdate } from './hooks/forceUpdate';
 
+const REFRESH_INTERVAL = 5000; // ms
 const TEST_TOPIC = 'test';
 
 declare global {
   interface Window {
     broadcast: (message: string) => void;
-    flood: (message: string) => void;
+    flood: (message: string) => Promise<void>;
     peer: Peer;
   }
 }
@@ -46,8 +47,8 @@ function App() {
       console.log(`${peerId.toString()} > ${data}`)
     })
 
-    window.flood = (message: string) => {
-      peer.floodMessage(TEST_TOPIC, message)
+    window.flood = async (message: string) => {
+      return peer.floodMessage(TEST_TOPIC, message)
     }
 
     peer.node.peerStore.addEventListener('change:multiaddrs', forceUpdate)
@@ -73,6 +74,15 @@ function App() {
       peer.node?.removeEventListener('peer:disconnect', disconnectHandler)
     }
   }, [peer, forceUpdate])
+
+  useEffect(() => {
+    // TODO: Add event for connection close and remove refresh in interval
+    const intervalID = setInterval(forceUpdate, REFRESH_INTERVAL);
+
+    return () => {
+      clearInterval(intervalID)
+    }
+  }, [forceUpdate])
 
   return (
     <ThemeProvider theme={theme}>
@@ -106,10 +116,8 @@ function App() {
                   <TableCell>{peer && peer.node && peer.node.isStarted().toString()}</TableCell>
                 </TableRow>
                 <TableRow>
-                  <TableCell><b>Signal server</b></TableCell>
-                  <TableCell>{process.env.REACT_APP_SIGNAL_SERVER}</TableCell>
                   <TableCell align="right"><b>Relay node</b></TableCell>
-                  <TableCell>{process.env.REACT_APP_RELAY_NODE}</TableCell>
+                  <TableCell colSpan={3}>{process.env.REACT_APP_RELAY_NODE}</TableCell>
                 </TableRow>
                 <TableRow>
                   <TableCell><b>Multiaddrs</b></TableCell>
@@ -151,6 +159,8 @@ function App() {
                           <TableCell>{connection.id}</TableCell>
                           <TableCell align="right"><b>Direction</b></TableCell>
                           <TableCell>{connection.stat.direction}</TableCell>
+                          <TableCell align="right"><b>Type</b></TableCell>
+                          <TableCell>{connection.remoteAddr.toString().includes('p2p-circuit/p2p') ? "relayed" : "direct"}</TableCell>
                           <TableCell align="right"><b>Status</b></TableCell>
                           <TableCell>{connection.stat.status}</TableCell>
                         </TableRow>

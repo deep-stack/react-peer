@@ -18,7 +18,7 @@
     "test:watch": "nwb test-react --server"
   },
   "dependencies": {
-    "@cerc-io/peer": "^0.2.25"
+    "@cerc-io/peer": "^0.2.26"
   },
   "peerDependencies": {
     "react": "^18.2.0"
