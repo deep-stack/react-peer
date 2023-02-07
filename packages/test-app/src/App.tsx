@@ -116,7 +116,7 @@ function App() {
                   <TableCell>{peer && peer.node && peer.node.isStarted().toString()}</TableCell>
                 </TableRow>
                 <TableRow>
-                  <TableCell align="right"><b>Relay node</b></TableCell>
+                  <TableCell><b>Relay node</b></TableCell>
                   <TableCell colSpan={3}>{process.env.REACT_APP_RELAY_NODE}</TableCell>
                 </TableRow>
                 <TableRow>
