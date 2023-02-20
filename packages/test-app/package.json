@@ -1,10 +1,10 @@
 {
   "name": "@cerc-io/test-app",
-  "version": "0.2.27",
+  "version": "0.2.28",
   "private": true,
   "dependencies": {
-    "@cerc-io/peer": "^0.2.27",
-    "@cerc-io/react-peer": "^0.2.27",
+    "@cerc-io/peer": "^0.2.28",
+    "@cerc-io/react-peer": "^0.2.28",
     "@emotion/react": "^11.10.5",
     "@emotion/styled": "^11.10.5",
     "@mui/material": "^5.11.3",
@@ -17,6 +17,7 @@
     "@types/react-dom": "^18.0.9",
     "assert": "^2.0.0",
     "it-pushable": "^3.1.2",
+    "promjs": "^0.4.2",
     "react": "^18.2.0",
     "react-dom": "^18.2.0",
     "react-scripts": "5.0.1",

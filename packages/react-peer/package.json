@@ -1,6 +1,6 @@
 {
   "name": "@cerc-io/react-peer",
-  "version": "0.2.27",
+  "version": "0.2.28",
   "description": "react-peer React component",
   "main": "lib/index.js",
   "files": [
@@ -18,7 +18,12 @@
     "test:watch": "nwb test-react --server"
   },
   "dependencies": {
-    "@cerc-io/peer": "^0.2.27"
+    "@cerc-io/peer": "^0.2.28",
+    "@mui/material": "^5.11.3",
+    "convert": "^4.10.0",
+    "d3": "^5.5.0",
+    "lodash": "^4.17.21",
+    "react-d3-graph": "^2.6.0"
   },
   "peerDependencies": {
     "react": "^18.2.0"
