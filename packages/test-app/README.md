@@ -11,10 +11,15 @@ This project was bootstrapped with [Create React App](https://github.com/faceboo
   yarn install
   ```
 
-* Set the relay node multiaddr in the [env](./.env) file:
+* Set the relay node multiaddrs in the [config](./src/config.json) file:
 
   ```
-  REACT_APP_RELAY_NODE=/ip4/0.0.0.0/tcp/9090/http/p2p-webrtc-direct/p2p/12D3KooWFn2tjcv1ciot6sXJDiCdxXAPh37pzxjBC1UmCkbP3QBo
+  {
+    "relayNodes": [
+      "/dns4/relay1.example.com/tcp/443/https/p2p-webrtc-direct/p2p/12D3KooWJhmR6LTn9rpiJjDkvWf4LbsoWe3iMVm53JFzGUBUAECt",
+      "/dns4/relay2.example.com/tcp/443/https/p2p-webrtc-direct/p2p/12D3KooWJLXEX2GfHPSZR3z9QKNSN8EY6pXo7FZ9XtFhiKLJATtC"
+    ]
+  }
   ```
 
 * Start the react app in development mode:

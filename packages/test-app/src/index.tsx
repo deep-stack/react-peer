@@ -5,6 +5,7 @@ import { PeerProvider } from '@cerc-io/react-peer';
 import './index.css';
 import App from './App';
 import reportWebVitals from './reportWebVitals';
+import config from './config.json';
 
 const root = ReactDOM.createRoot(
   document.getElementById('root') as HTMLElement
@@ -12,7 +13,7 @@ const root = ReactDOM.createRoot(
 root.render(
   // TODO: StrictMode renders component twice in development which currently causes problems with instantiating peer node.
   // <React.StrictMode>
-  <PeerProvider relayNode={process.env.REACT_APP_RELAY_NODE}>
+  <PeerProvider relayNodes={config.relayNodes ?? []}>
     <App />
   </PeerProvider>
   // </React.StrictMode>

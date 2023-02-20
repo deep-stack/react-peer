@@ -1,5 +1,6 @@
 import React, { useContext, useEffect } from 'react';
 
+import { getPseudonymForPeerId } from '@cerc-io/peer';
 import { Box, Chip, Paper, Table, TableBody, TableCell, TableContainer, TableHead, TableRow, Typography } from '@mui/material';
 
 import { useForceUpdate } from '../hooks/forceUpdate';
@@ -45,15 +46,17 @@ export function DebugInfo ({ refreshInterval = DEFAULT_REFRESH_INTERVAL, ...prop
           <TableBody>
             <TableRow>
               <TableCell size="small"><b>Peer ID</b></TableCell>
-              <TableCell size="small">{peer && peer.peerId && peer.peerId.toString()}</TableCell>
-              <TableCell size="small" align="right"><b>Relay node</b></TableCell>
-              <TableCell size="small">{peer && peer.relayNodeMultiaddr.toString()}</TableCell>
+              <TableCell size="small">{peer && peer.peerId && `${peer.peerId.toString()} ( ${getPseudonymForPeerId(peer.peerId.toString())} )`}</TableCell>
               <TableCell size="small" align="right"><b>Node started</b></TableCell>
-              <TableCell size="small" sx={{ width: 50 }}>{peer && peer.node && peer.node.isStarted().toString()}</TableCell>
+              <TableCell size="small" sx = {{ width: 150 }}>{peer && peer.node && peer.node.isStarted().toString()}</TableCell>
+            </TableRow>
+            <TableRow>
+              <TableCell size="small"><b>Relay node</b></TableCell>
+              <TableCell size="small" colSpan={3}>{peer && `${peer.relayNodeMultiaddr.toString()} ( ${getPseudonymForPeerId(peer.relayNodeMultiaddr.getPeerId())} )`}</TableCell>
             </TableRow>
             <TableRow>
               <TableCell size="small"><b>Multiaddrs</b></TableCell>
-              <TableCell size="small" colSpan={5}>
+              <TableCell size="small" colSpan={3}>
                 <TableContainer>
                   <Table size="small">
                     <TableBody>
@@ -100,9 +103,17 @@ export function DebugInfo ({ refreshInterval = DEFAULT_REFRESH_INTERVAL, ...prop
                     </TableRow>
                     <TableRow>
                       <TableCell size="small"><b>Peer ID</b></TableCell>
-                      <TableCell size="small" colSpan={4}>{connection.remotePeer.toString()}</TableCell>
+                      <TableCell size="small">{`${connection.remotePeer.toString()} ( ${getPseudonymForPeerId(connection.remotePeer.toString())} )`}</TableCell>
+                      <TableCell align="right"><b>Node type</b></TableCell>
+                      <TableCell>
+                        {
+                          peer.isRelayPeerMultiaddr(connection.remoteAddr.toString())
+                            ? peer.isPrimaryRelay(connection.remoteAddr.toString()) ? "Relay (Primary)" : "Relay (Secondary)"
+                            : "Peer"
+                        }
+                      </TableCell>
                       <TableCell size="small" align="right"><b>Latency (ms)</b></TableCell>
-                      <TableCell size="small" colSpan={2}>
+                      <TableCell size="small" colSpan={3}>
                         {
                           peer.getLatencyData(connection.remotePeer)
                             .map((value, index) => {
@@ -115,11 +126,7 @@ export function DebugInfo ({ refreshInterval = DEFAULT_REFRESH_INTERVAL, ...prop
                     </TableRow>
                     <TableRow>
                       <TableCell size="small" sx={{ width: 150 }}><b>Connected multiaddr</b></TableCell>
-                      <TableCell size="small" colSpan={7}>
-                        {connection.remoteAddr.toString()}
-                        &nbsp;
-                        <b>{connection.remoteAddr.equals(peer.relayNodeMultiaddr) && "(RELAY NODE)"}</b>
-                      </TableCell>
+                      <TableCell size="small" colSpan={7}>{connection.remoteAddr.toString()}</TableCell>
                     </TableRow>
                   </TableBody>
                 </Table>
