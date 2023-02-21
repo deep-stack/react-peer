@@ -14,13 +14,17 @@ export const PeerProvider = ({ relayNodes, children }) => {
         throw new Error('Relay nodes not set');
       }
 
-      const randomIndex = Math.floor(Math.random() * relayNodes.length);
-      const randomRelayNode = relayNodes[randomIndex];
+      let primaryRelayNode = localStorage.getItem('primaryRelay');
 
-      const peer = new Peer(randomRelayNode);
+      if (!Boolean(primaryRelayNode)) {
+        const randomIndex = Math.floor(Math.random() * relayNodes.length);
+        primaryRelayNode = relayNodes[randomIndex];
+      }
+
+      const peer = new Peer(primaryRelayNode);
 
       // Try to get peer id from browser's local storage
-      let peerIdFromStorage = localStorage.getItem('PeerId');
+      let peerIdFromStorage = localStorage.getItem('peerId');
       let peerIdObj;
 
       if (peerIdFromStorage) {
@@ -36,7 +40,7 @@ export const PeerProvider = ({ relayNodes, children }) => {
       // Debug
       console.log(`Peer ID: ${peer.peerId.toString()}`);
 
-      localStorage.setItem('PeerId', JSON.stringify(peerIdObj));
+      localStorage.setItem('peerId', JSON.stringify(peerIdObj));
       setPeer(peer);
     };
 

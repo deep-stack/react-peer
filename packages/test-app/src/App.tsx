@@ -5,6 +5,7 @@ import { Peer } from '@cerc-io/peer';
 import { createTheme, ThemeProvider } from '@mui/material/styles';
 import { AppBar, Box, Card, CardContent, CssBaseline, Toolbar, Typography } from '@mui/material';
 
+import config from './config.json';
 import './App.css';
 
 const TEST_TOPIC = 'test';
@@ -83,7 +84,7 @@ function App() {
         >
           <Card raised>
             <CardContent sx={STYLES.cardContent}>
-              <DebugInfo />
+              <DebugInfo relayNodes={config.relayNodes ?? []} />
             </CardContent>
           </Card>
           <Card sx={{ marginTop: 2 }} raised>
