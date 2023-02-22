@@ -1,9 +1,10 @@
-import React, { useCallback, useState } from 'react';
+import React, { useCallback, useEffect, useState } from 'react';
 import { Graph } from 'react-d3-graph';
-import { Box, Popover, Table, TableBody, TableCell, TableContainer, TableRow, Tooltip, Typography } from '@mui/material';
+import { Box, Popover, Table, TableBody, TableCell, TableContainer, TableRow, Typography } from '@mui/material';
+import { getPseudonymForPeerId } from '@cerc-io/peer';
 
 // Graph configuration.
-const graphConfig = {
+const GRAPH_CONFIG = {
   nodeHighlightBehavior: true,
   node: {
       color: 'blue',
@@ -43,13 +44,31 @@ const graphConfig = {
   width: window.innerWidth - 64
 };
 
-function NetworkGraph ({ peer }) {
+function NetworkGraph ({ peer, connections }) {
   const links = [];
   const relayMultiaddr = peer.relayNodeMultiaddr
   const [anchorEl, setAnchorEl] = useState(null)
   const [hoveredPeer, setHoveredPeer] = useState(null)
+  const [prevConnections, setPrevConnections] = useState(connections.map(connection => connection.id))
+  const [graphKey, setGraphKey] = useState('')
 
-  const remotePeerNodes = peer.node.getConnections().map(connection => {
+  // Issue with links in graph not getting removed after disconnect
+  // Workaround to re render graph after disconnects between peers
+  useEffect(() => {
+    const connectionIds = connections.map(connection => connection.id)
+    // Compare connections and check if any previous connection missing
+    const isConnectionMissing = prevConnections.some(connectionId => !connectionIds.includes(connectionId));
+    
+    if (isConnectionMissing) {
+      setGraphKey(JSON.stringify(connectionIds));
+    }
+
+    return () => {
+      setPrevConnections(connections.map(connection => connection.id))
+    }
+  }, [connections])
+
+  const remotePeerNodes = connections.map(connection => {
     const connectionMultiAddr = connection.remoteAddr
     
     const nodeData = {
@@ -109,9 +128,10 @@ function NetworkGraph ({ peer }) {
   return (
     <Box>
       <Graph
+        key={graphKey}
         id="network-graph"
         data={data}
-        config={graphConfig}
+        config={GRAPH_CONFIG}
         onMouseOverNode={onMouseOverNode}
         onMouseOutNode={() => setAnchorEl(null)}
       />
@@ -138,12 +158,12 @@ function NetworkGraph ({ peer }) {
             <TableBody>
               <TableRow>
                 <TableCell size="small"><b>Peer ID</b></TableCell>
-                <TableCell size="small">{hoveredPeer && hoveredPeer.id}</TableCell>
+                <TableCell size="small">{hoveredPeer && `${hoveredPeer.id} ( ${getPseudonymForPeerId(hoveredPeer.id)} )`}</TableCell>
               </TableRow>
               <TableRow>
                 <TableCell size="small"><b>Multiaddr</b></TableCell>
                 <TableCell size="small">
-                  {hoveredPeer && hoveredPeer.multiaddrs.map(multiaddr => (<Typography variant="body2">{multiaddr}</Typography>))}
+                  {hoveredPeer && hoveredPeer.multiaddrs.map(multiaddr => (<Typography key={multiaddr} variant="body2">{multiaddr}</Typography>))}
                 </TableCell>
               </TableRow>
             </TableBody>

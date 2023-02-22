@@ -4,8 +4,14 @@ import { Peer, createPeerId } from '@cerc-io/peer';
 
 import { PeerContext } from './PeerContext';
 
+const PEER_INIT_CONFIG = {
+  maxConnections: 100,
+  maxRelayConnections: 5
+};
+
 export const PeerProvider = ({ relayNodes, children }) => {
   const [peer, setPeer] = React.useState(null);
+  const [initConfig, setInitConfig] = React.useState(PEER_INIT_CONFIG);
 
   React.useEffect(() => {
     const init = async () => {
@@ -35,7 +41,7 @@ export const PeerProvider = ({ relayNodes, children }) => {
         peerIdObj = await createPeerId();
       }
 
-      await peer.init(peerIdObj);
+      await peer.init(initConfig, peerIdObj);
 
       // Debug
       console.log(`Peer ID: ${peer.peerId.toString()}`);
