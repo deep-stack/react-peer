@@ -1,0 +1,12 @@
+{
+  "name": "peer-test-automation",
+  "version": "1.0.0",
+  "main": "index.js",
+  "license": "MIT",
+  "scripts": {
+    "test": "node peer-selenium.js"
+  },
+  "dependencies": {
+    "selenium-webdriver": "^4.8.1"
+  }
+}
