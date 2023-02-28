@@ -34,6 +34,7 @@ async function getConnections(connectionElement){
 async function trackPeerConnections (element, args, flags){
   while(!flags.testSuccessful && !flags.abortTest){
     try {
+      // signals
       connections = await getConnections(element);
       console.log("Current connections : ", connections);
 
@@ -52,6 +53,8 @@ async function trackPeerConnections (element, args, flags){
           console.log(e.message);
           console.log("Retrying after a few seconds.")
           flags.isRetry = true;
+
+          // change name 
           await sleep(args.WAIT_BEFORE_ABORT);
         }
       } else {
@@ -179,6 +182,7 @@ async function runTestWithCaps (capabilities) {
     ]); 
         
   } catch (e) {
+    // TODO : handle more exeptions 
     await driver.executeScript(
       'browserstack_executor: {"action": "setSessionStatus", "arguments": {"status":"failed","reason": "Some elements failed to load!"}}'
     );
