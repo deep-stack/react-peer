@@ -1,14 +1,14 @@
 require('dotenv').config();
 
-import fs from 'fs';
+const { fs } = require('fs');
 
-import {trackPeerConnections, floodTest} from './utils'
-import { MIN_REQUIRED_CONNECTIONS } from './constants';
+const {trackPeerConnections, floodTest} = require('./utils.js');
+const { MIN_REQUIRED_CONNECTIONS } = require ('./constants.js');
 
 const webdriver = require('selenium-webdriver');
 const logging = require('selenium-webdriver').logging;  
 
-const peerTestAppURL = "https://peer-test-app.dev.vdb.to/"
+const PEER_TEST_APP_URL = "https://peer-test-app.dev.vdb.to/"
 
 async function runTestWithCapabilities (capabilities) {
     var prefs = new logging.Preferences();
@@ -18,7 +18,7 @@ async function runTestWithCapabilities (capabilities) {
     const BrowserstackAccessKey = process.env.BSTACK_ACCESS_KEY;
 
     let driver = new webdriver.Builder()
-        .usingServer('http://' + BrowserstackUsername + ':' + BrowserstackAccessKey + '@hub-cloud.browserstack.com/wd/hub')
+        .usingServer(`http://${BrowserstackUsername}:${BrowserstackAccessKey}@hub-cloud.browserstack.com/wd/hub`)
         .withCapabilities({
             ...capabilities,
             ...capabilities['browser'] && { browserName: capabilities['browser']}  // Because NodeJS language binding requires browserName to be defined
@@ -27,8 +27,9 @@ async function runTestWithCapabilities (capabilities) {
         .build();
   
     try {
-        await driver.get(peerTestAppURL);
+        await driver.get(PEER_TEST_APP_URL);
 
+        // TODO: Use HTML id tags for selecting elements
         const xpaths = JSON.parse(fs.readFileSync("elements-xpaths.json"));
 
         // Waits till node starts
@@ -47,7 +48,6 @@ async function runTestWithCapabilities (capabilities) {
             });
         }, 100 * 1000);
         const peerId =  await peerIdElement.getText().then(function (peerId) {return peerId;});
-        console.log("Peer id : ", peerId);
 
         // Wait for sufficient connections
         // TODO: Use a better heuristic
@@ -77,4 +77,4 @@ async function runTestWithCapabilities (capabilities) {
     await driver.quit();
 }
   
-export { runTestWithCapabilities };
+module.exports = { runTestWithCapabilities };

@@ -1,5 +1,5 @@
-import { TOTAL_PEERS } from './constants';
-import { runTestWithCapabilities } from './peer.test';
+const { TOTAL_PEERS } = require('./constants.js');
+const { runTestWithCapabilities } =  require('./peer.test.js');
 
 const capabilities = {
   'bstack:options' : {
@@ -17,6 +17,8 @@ async function main() {
   for (var i = 0; i<TOTAL_PEERS; i++) {
     instances.push(runTestWithCapabilities(capabilities));
   }
+
+  // Launches browser instances on Browserstack parallelly
   await Promise.all(instances);
 }
 

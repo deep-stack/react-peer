@@ -1,6 +1,13 @@
-require('./constants'); 
-
 const webdriver = require('selenium-webdriver');
+
+const {
+    CHECK_CONNECTION_INTERVAL,
+    MIN_REQUIRED_CONNECTIONS,
+    WAIT_BEFORE_RETRY,
+    TEST_RETRIES,
+    TEST_INTERVAL,
+    TOTAL_PEERS,
+} = require('./constants'); 
 
 const sleep = sec => new Promise(r => setTimeout(r, sec * 1000));
 
@@ -16,10 +23,10 @@ async function getConnections(connectionElement){
     return parseInt(connections);
 }
 
-
 // Periodically tracks number of connections to check if they drop below the desired number
 async function trackPeerConnections (element, flags) {
-    while(!flags.testSuccessful && !flags.abortTest) {
+    // Run until test is either successful or aborted
+    while (!(flags.testSuccessful || flags.abortTest)) {
         try {
             let connections = await getConnections(element);
             if (connections < MIN_REQUIRED_CONNECTIONS) {
@@ -51,13 +58,14 @@ async function trackPeerConnections (element, flags) {
 // Periodically sends and listens for flood messages
 async function floodTest(driver, peerId, flags) {
     const floodFrom = new Map();
-    checkMsg = 'Hello from ';
-    floodMsg = checkMsg + peerId;
-    floodCmd = 'flood("'+floodMsg+'")';
+    checkMsg = 'Hello from';
+    floodCmd = `flood("${checkMsg} : ${peerId}")`;
+
     try {
-        var i = 1;
-        while(i < TEST_RETRIES && !flags.testSuccessful && !flags.abortTest) {
-        
+        var tryCount = 1;
+
+        // Repeat for specified number of times as long as test is neither successful nor aborted 
+        while (tryCount < TEST_RETRIES && !(flags.testSuccessful || flags.abortTest)) {
             await driver.executeScript(floodCmd); 
             await sleep(TEST_INTERVAL);
 
@@ -72,7 +80,7 @@ async function floodTest(driver, peerId, flags) {
                 return logEntries;
             });
   
-            logEntries.forEach(async function (entry){
+            logEntries.forEach(async function (entry) {
                 let exists  = floodFrom.get(entry);
                 if(exists){
                     floodFrom.set(entry, exists+1);
@@ -81,11 +89,12 @@ async function floodTest(driver, peerId, flags) {
                 } 
             });
     
-            if(floodFrom.size === TOTAL_PEERS){
+            if(floodFrom.size === TOTAL_PEERS) {
                 flags.testSuccessful = true;
                 return;
             }
-            i++;
+            
+            tryCount++;
         }
   
         if(!flags.testSuccessful){
@@ -96,4 +105,4 @@ async function floodTest(driver, peerId, flags) {
     }
 }
 
-export { trackPeerConnections, floodTest };
+module.exports = { trackPeerConnections, floodTest };

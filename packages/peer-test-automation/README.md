@@ -16,8 +16,8 @@
 ## Run tests
 
 * Run Browserstack test using yarn
-    ```
+    ```bash
     yarn test
     ```
-* Check [Browserstack dashboard](https://automate.browserstack.com/dashboard/v2). Your browser instances should show up there. 
-* Test launches multiple browser instances on Browserstack. These instances attempt to connect to [peer-test-app](https://peer-test-app.dev.vdb.to/). Once the peer is connected, it prints it's `peerId` to the console and waits for connections. Once enough connections are established, it starts testing and prints any updates to the console.
+* Visit [Browserstack dashboard](https://automate.browserstack.com/dashboard/v2) to check the status of your test. 
+* Test launches multiple browser instances on Browserstack. These instances attempt to connect to [peer-test-app](https://peer-test-app.dev.vdb.to/). When the peer is connected to a relay, it waits for connections with other peers. The test starts once enough connections are established.

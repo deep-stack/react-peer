@@ -3,7 +3,7 @@
   "version": "0.2.28",
   "license": "AGPL-version-3.0",
   "scripts": {
-    "test": "node peer-selenium.js"
+    "test": "node src/index.js"
   },
   "dependencies": {
     "selenium-webdriver": "^4.8.1"
