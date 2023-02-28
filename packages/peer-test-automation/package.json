@@ -1,8 +1,7 @@
 {
-  "name": "peer-test-automation",
-  "version": "1.0.0",
-  "main": "index.js",
-  "license": "MIT",
+  "name": "@cerc-io/peer-test-automation",
+  "version": "0.2.28",
+  "license": "AGPL-version-3.0",
   "scripts": {
     "test": "node peer-selenium.js"
   },
