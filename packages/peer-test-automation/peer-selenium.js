@@ -1,12 +1,12 @@
+require('dotenv').config();
+const fs = require('fs');
 const webdriver = require('selenium-webdriver');
 var logging = require('selenium-webdriver').logging;
 
-const BrowserstackUsername = '<BrowserStack-Username>'
-const BrowserstackAccessKey = '<BrowserStack-AccessKey>'
+const BrowserstackUsername = process.env.BSTACK_USERNAME
+const BrowserstackAccessKey = process.env.BSTACK_ACCESS_KEY
 
-const nodeStartedXpath = '/html/body/div/main/div/div[1]/div/div/div[2]/table/tbody/tr[1]/td[4]'
-const peerIdXpath = '/html/body/div/main/div/div[1]/div/div/div[2]/table/tbody/tr[1]/td[2]'
-const peerConnectionsXpath = '/html/body/div/main/div/div[3]/div/div/h6/b/div' 
+const xpaths = JSON.parse(fs.readFileSync('elems-xpaths.json'));
 
 const args  = {
   MIN_REQUIRED_CONNECTIONS: 4,
@@ -137,7 +137,7 @@ async function runTestWithCaps (capabilities) {
     await driver.get("https://peer-test-app.dev.vdb.to/");
 
     // wait till node starts
-    const nodeStartedElement = await driver.findElement(webdriver.By.xpath(nodeStartedXpath));
+    const nodeStartedElement = await driver.findElement(webdriver.By.xpath(xpaths.nodeStartedXpath));
     await driver.wait(async function(){
       return await nodeStartedElement.getText().then(function (hasNodeStarted){
         return hasNodeStarted == 'true';
@@ -146,7 +146,7 @@ async function runTestWithCaps (capabilities) {
     console.log("Node started.");
 
     // fetch peer id 
-    const peerIdElement = await driver.findElement(webdriver.By.xpath(peerIdXpath));
+    const peerIdElement = await driver.findElement(webdriver.By.xpath(xpaths.peerIdXpath));
     await driver.wait(async function(){
       return peerIdElement.getText().then(function (peerId){
         return peerId != '';
@@ -157,7 +157,7 @@ async function runTestWithCaps (capabilities) {
 
     
     // wait for sufficient connections
-    const peerConnectionsElement = driver.findElement(webdriver.By.xpath(peerConnectionsXpath));
+    const peerConnectionsElement = driver.findElement(webdriver.By.xpath(xpaths.peerConnectionsXpath));
     await driver.wait(async function(){
       return await peerConnectionsElement.getText().then(function(connections){
         return parseInt(connections) >= args.MIN_REQUIRED_CONNECTIONS;
