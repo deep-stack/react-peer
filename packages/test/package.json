@@ -3,6 +3,8 @@
   "version": "0.2.28",
   "license": "AGPL-version-3.0",
   "scripts": {
+    "build": "yarn clean && tsc",
+    "clean": "rm -rf ./dist",
     "test": "node src/index.js"
   },
   "dependencies": {

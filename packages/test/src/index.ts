@@ -1,4 +1,4 @@
-const { TOTAL_PEERS } = require('./constants.js');
+import { TOTAL_PEERS } from './constants';
 const { runTestWithCapabilities } =  require('./peer.test.js');
 
 const capabilities = {

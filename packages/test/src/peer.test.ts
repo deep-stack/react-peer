@@ -1,4 +1,7 @@
-require('dotenv').config();
+import * as dotenv from "dotenv";
+
+// Check if works without
+// dotenv.config({ path: __dirname+'/.env' });
 
 const { fs } = require('fs');
 
@@ -10,7 +13,7 @@ const logging = require('selenium-webdriver').logging;
 
 const PEER_TEST_APP_URL = "https://peer-test-app.dev.vdb.to/"
 
-async function runTestWithCapabilities (capabilities) {
+export async function runTestWithCapabilities (capabilities: any) {
     var prefs = new logging.Preferences();
     prefs.setLevel(logging.Type.BROWSER, logging.Level.ALL);
 
@@ -35,25 +38,25 @@ async function runTestWithCapabilities (capabilities) {
         // Waits till node starts
         const nodeStartedElement = await driver.findElement(webdriver.By.xpath(xpaths.nodeStartedXpath));
         await driver.wait(async function(){
-            return await nodeStartedElement.getText().then(function (hasNodeStarted){
-                return hasNodeStarted == 'true';
+            return await nodeStartedElement.getText().then(function (hasNodeStarted: string){
+                return hasNodeStarted === 'true';
             });
         }, 100 * 1000);
 
         // Fetch peer id
         const peerIdElement = await driver.findElement(webdriver.By.xpath(xpaths.peerIdXpath));
         await driver.wait(async function(){
-            return peerIdElement.getText().then(function (peerId){
+            return peerIdElement.getText().then(function (peerId: string){
                 return peerId != '';
             });
         }, 100 * 1000);
-        const peerId =  await peerIdElement.getText().then(function (peerId) {return peerId;});
+        const peerId =  await peerIdElement.getText().then(function (peerId: any) {return peerId;});
 
         // Wait for sufficient connections
         // TODO: Use a better heuristic
         const peerConnectionsElement = driver.findElement(webdriver.By.xpath(xpaths.peerConnectionsXpath));
         await driver.wait(async function(){
-            return await peerConnectionsElement.getText().then(function(connections){
+            return await peerConnectionsElement.getText().then(function(connections: string){
                 return parseInt(connections) >= MIN_REQUIRED_CONNECTIONS;
             });
         }, 100 * 1000);
@@ -76,5 +79,3 @@ async function runTestWithCapabilities (capabilities) {
     }
     await driver.quit();
 }
-
-module.exports = { runTestWithCapabilities };
