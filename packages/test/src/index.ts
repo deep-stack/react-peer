@@ -1,20 +1,20 @@
+import { runTestWithCapabilities } from './peer.test.js';
 import { TOTAL_PEERS } from './constants';
-const { runTestWithCapabilities } =  require('./peer.test.js');
 
-const capabilities = {
-  'bstack:options' : {
-      "os": "Windows",
-      "osVersion": "11",
-      "browserVersion": "110.0",
-      "buildName" : "Automated-peer-test-build-1",
-      "sessionName" : "Parallel test 1",
+const capabilities: any = {
+  'bstack:options': {
+    os: 'Windows',
+    osVersion: '11',
+    browserVersion: '110.0',
+    buildName: 'Automated-peer-test-build-1',
+    sessionName: 'Parallel test 1'
   },
-  "browserName": "Chrome"
+  browserName: 'Chrome'
 };
 
-async function main() {
-  var instances = [];
-  for (var i = 0; i<TOTAL_PEERS; i++) {
+async function main () {
+  const instances = [];
+  for (let i = 0; i < TOTAL_PEERS; i++) {
     instances.push(runTestWithCapabilities(capabilities));
   }
 
@@ -22,6 +22,8 @@ async function main() {
   await Promise.all(instances);
 }
 
-main().catch(function(e){
-  console.log(e);
+main().catch(err => {
+  console.log(err);
+}).finally(() => {
+  process.exit();
 });
