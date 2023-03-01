@@ -1,77 +1,69 @@
-
+import fs from 'fs';
 import path from 'path';
 import * as dotenv from 'dotenv';
-
-import fs from 'fs';
 import webdriver, { logging } from 'selenium-webdriver';
 
-import { trackPeerConnections, floodTest } from './utils.js';
-import { MIN_REQUIRED_CONNECTIONS } from './constants.js';
+import { TestState, trackPeerConnections, floodTest, getConnections } from './utils.js';
+import { MIN_REQUIRED_CONNECTIONS, NODE_START_TIMEOUT } from './constants.js';
 
 dotenv.config({ path: path.resolve(__dirname, '../.env') });
 
-// TODO: Take from env file
-const PEER_TEST_APP_URL = 'https://peer-test-app.dev.vdb.to/';
-
-export async function runTestWithCapabilities (capabilities: any) {
+export async function runTestWithCapabilities (capabilities: webdriver.Capabilities) {
   const prefs = new logging.Preferences();
   prefs.setLevel(logging.Type.BROWSER, logging.Level.ALL);
 
-  const BrowserstackUsername = process.env.BSTACK_USERNAME;
-  const BrowserstackAccessKey = process.env.BSTACK_ACCESS_KEY;
-
   const driver = new webdriver.Builder()
-    .usingServer(`http://${BrowserstackUsername}:${BrowserstackAccessKey}@hub-cloud.browserstack.com/wd/hub`)
-    .withCapabilities({
-      ...capabilities,
-      ...capabilities.browser && { browserName: capabilities.browser } // Because NodeJS language binding requires browserName to be defined
-    })
+    .usingServer(`http://${process.env.BSTACK_USERNAME}:${process.env.BSTACK_ACCESS_KEY}@hub-cloud.browserstack.com/wd/hub`)
+    .withCapabilities(capabilities)
     .setLoggingPrefs(prefs)
     .build();
 
   try {
-    await driver.get(PEER_TEST_APP_URL);
+    const appURL = process.env.PEER_TEST_APP_URL;
+    if (!appURL) {
+      throw new Error('App URL not provided');
+    }
+
+    await driver.get(appURL);
 
     // TODO: Use HTML id tags for selecting elements
     const xpaths = JSON.parse(fs.readFileSync('elements-xpaths.json').toString());
 
-    // Waits till node starts
+    // Wait for the peer node to start
+    // TODO: Check that awaiting on the element works
     const nodeStartedElement = await driver.findElement(webdriver.By.xpath(xpaths.nodeStartedXpath));
-    await driver.wait(async function () {
-      return await nodeStartedElement.getText().then(function (hasNodeStarted: string) {
-        return hasNodeStarted === 'true';
-      });
-    }, 100 * 1000);
+    await driver.wait(async () => {
+      const hasNodeStarted = await nodeStartedElement.getText();
+      return hasNodeStarted === 'true';
+    }, NODE_START_TIMEOUT);
 
     // Fetch peer id
     const peerIdElement = await driver.findElement(webdriver.By.xpath(xpaths.peerIdXpath));
     await driver.wait(async function () {
-      return peerIdElement.getText().then(function (peerId: string) {
-        return peerId !== '';
-      });
-    }, 100 * 1000);
-    const peerId = await peerIdElement.getText().then(peerId => peerId);
+      const peerId = await peerIdElement.getText();
+      return peerId !== '';
+    }, NODE_START_TIMEOUT);
+    const peerId = await peerIdElement.getText();
 
     // Wait for sufficient connections
     // TODO: Use a better heuristic
-    const peerConnectionsElement = driver.findElement(webdriver.By.xpath(xpaths.peerConnectionsXpath));
+    const peerConnectionsElement = await driver.findElement(webdriver.By.xpath(xpaths.peerConnectionsXpath));
     await driver.wait(async function () {
-      return await peerConnectionsElement.getText().then(function (connections: string) {
-        return parseInt(connections) >= MIN_REQUIRED_CONNECTIONS;
-      });
-    }, 100 * 1000);
+      const connectionCount = await getConnections(peerConnectionsElement);
+      return connectionCount >= MIN_REQUIRED_CONNECTIONS;
+    }, NODE_START_TIMEOUT);
 
-    const flags = {
+    const testState: TestState = {
       isRetry: false,
-      testSuccessful: false,
-      abortTest: false
+      successful: false,
+      aborted: false
     };
 
     await Promise.all([
-      trackPeerConnections(peerConnectionsElement, flags),
-      floodTest(driver, peerId, flags)
+      trackPeerConnections(peerConnectionsElement, testState),
+      floodTest(driver, peerId, testState)
     ]);
-  } catch (e) {
+  } catch (err) {
     await driver.executeScript(
       'browserstack_executor: {"action": "setSessionStatus", "arguments": {"status":"failed","reason": "Some elements failed to load!"}}'
     );

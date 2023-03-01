@@ -1,7 +1,9 @@
+import webdriver from 'selenium-webdriver';
+
 import { runTestWithCapabilities } from './peer.test.js';
 import { TOTAL_PEERS } from './constants';
 
-const capabilities: any = {
+const capabilities = {
   'bstack:options': {
     os: 'Windows',
     osVersion: '11',
@@ -12,13 +14,15 @@ const capabilities: any = {
   browserName: 'Chrome'
 };
 
+// TODO: Test with mobymask app
 async function main () {
+  // Launch browser instances on Browserstack
+  const chromeInWindowsCapabilities = new webdriver.Capabilities(new Map(Object.entries(capabilities)));
   const instances = [];
   for (let i = 0; i < TOTAL_PEERS; i++) {
-    instances.push(runTestWithCapabilities(capabilities));
+    instances.push(runTestWithCapabilities(chromeInWindowsCapabilities));
   }
 
-  // Launches browser instances on Browserstack parallelly
   await Promise.all(instances);
 }
 

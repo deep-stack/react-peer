@@ -5,96 +5,95 @@ import {
   MIN_REQUIRED_CONNECTIONS,
   WAIT_BEFORE_RETRY,
   TEST_RETRIES,
-  TEST_INTERVAL,
+  FLOOD_LOG_CHECK_INTERVAL,
   TOTAL_PEERS
 } from './constants';
 
 const sleep = (sec: number) => new Promise((resolve) => setTimeout(resolve, sec * 1000));
 
-class ConnectionDropped extends Error {}
-
-async function getConnections (connectionElement: any) {
-  const connections = await connectionElement.getText().then((conns: any) => conns);
-  return parseInt(connections);
+export interface TestState {
+  isRetry: boolean;
+  successful: boolean;
+  aborted: boolean;
 }
 
+class ConnectionDropped extends Error {}
+
 // Periodically tracks number of connections to check if they drop below the desired number
-export async function trackPeerConnections (element: any, flags: any): Promise<void> {
+export async function trackPeerConnections (element: webdriver.WebElement, testState: TestState): Promise<void> {
   // Run until test is either successful or aborted
-  while (!(flags.testSuccessful || flags.abortTest)) {
+  while (!(testState.successful || testState.aborted)) {
     try {
-      const connections = await getConnections(element);
-      if (connections < MIN_REQUIRED_CONNECTIONS) {
-        throw new ConnectionDropped('Number of connections less than minimum required for testing.');
-      } else {
-        await sleep(CHECK_CONNECTION_INTERVAL);
+      const connectionCount = await getConnections(element);
+      if (connectionCount < MIN_REQUIRED_CONNECTIONS) {
+        throw new ConnectionDropped('Number of connections less than minimum required for testing');
       }
+
+      await sleep(CHECK_CONNECTION_INTERVAL);
     } catch (err) {
       if (err instanceof ConnectionDropped) {
-        if (flags.isRetry) {
-          console.log('Connections still under minimum required, aborting execution.');
-          flags.abortTest = true;
-        } else {
-          flags.isRetry = true;
-
-          console.log(err.message);
-          console.log('Retrying after a few seconds.');
-          await sleep(WAIT_BEFORE_RETRY);
-        }
+        await _handleDroppedConnection(testState, err.message);
       } else {
-        console.log('Unexpected error at trackPeerConnections : ', err);
-        flags.abortTest = true;
+        console.log('Unexpected error: ', err);
+        testState.aborted = true;
       }
     }
   }
 }
 
 // Periodically sends and listens for flood messages
-export async function floodTest (driver: webdriver.ThenableWebDriver, peerId: any, flags: any) {
-  const floodFrom = new Map();
-  const checkMsg = 'Hello from';
-  const floodCmd = `flood("${checkMsg} : ${peerId}")`;
+export async function floodTest (driver: webdriver.ThenableWebDriver, peerId: string, testState: TestState) {
+  const floodFrom: Map<string, boolean> = new Map();
+  const prefix = 'Hello from';
+  const floodCmd = `flood("${prefix} ${peerId}")`;
 
   try {
     let tryCount = 1;
 
     // Repeat for specified number of times as long as test is neither successful nor aborted
-    while (tryCount < TEST_RETRIES && !(flags.testSuccessful || flags.abortTest)) {
+    while (tryCount < TEST_RETRIES && !(testState.successful || testState.aborted)) {
       await driver.executeScript(floodCmd);
-      await sleep(TEST_INTERVAL);
+      await sleep(FLOOD_LOG_CHECK_INTERVAL);
 
-      const logEntries = await driver.manage().logs().get(webdriver.logging.Type.BROWSER).then(function (entries: any) {
-        let logEntries: any = [];
-        entries.forEach(function (entry: any) {
-          const ok = '' + entry.message;
-          if (ok.includes(checkMsg)) {
-            logEntries = logEntries.concat([ok.split(checkMsg)[1]]);
-          }
-        });
-        return logEntries;
-      });
+      const logEntries = await driver.manage().logs().get(webdriver.logging.Type.BROWSER);
 
-      logEntries.forEach(async function (entry: any) {
-        const exists = floodFrom.get(entry);
-        if (exists) {
-          floodFrom.set(entry, exists + 1);
-        } else {
-          floodFrom.set(entry, 1);
+      logEntries.forEach(logEntry => {
+        const log = logEntry.message;
+        if (log.includes(prefix)) {
+          const peerId = log.split(prefix)[1];
+          floodFrom.set(peerId, true);
         }
       });
 
       if (floodFrom.size === TOTAL_PEERS) {
-        flags.testSuccessful = true;
-        return;
+        testState.successful = true;
       }
 
       tryCount++;
     }
 
-    if (!flags.testSuccessful) {
-      driver.executeScript('browserstack_executor: {"action": "setSessionStatus", "arguments": {"status":"failed", "Flood test failed : Did not get flood messages back"');
+    if (!testState.successful) {
+      driver.executeScript('browserstack_executor: {"action": "setSessionStatus", "arguments": {"status":"failed", "Flood test failed : Did not get all flood messages"');
     }
   } catch (err) {
     console.log(err);
+  }
+}
+
+export async function getConnections (connectionElement: webdriver.WebElement): Promise<number> {
+  const connectionCountString = await connectionElement.getText();
+  return parseInt(connectionCountString);
+}
+
+async function _handleDroppedConnection (testState: TestState, errMessage: string) {
+  if (testState.isRetry) {
+    console.log('Connections still under minimum required, aborting execution.');
+    testState.aborted = true;
+  } else {
+    testState.isRetry = true;
+
+    console.log(errMessage);
+    console.log('Retrying after a few seconds.');
+    await sleep(WAIT_BEFORE_RETRY);
   }
 }
