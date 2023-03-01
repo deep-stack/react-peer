@@ -1,5 +1,5 @@
 {
-  "name": "@cerc-io/peer-test-automation",
+  "name": "@cerc-io/test",
   "version": "0.2.28",
   "license": "AGPL-version-3.0",
   "scripts": {

@@ -6,14 +6,14 @@ const {trackPeerConnections, floodTest} = require('./utils.js');
 const { MIN_REQUIRED_CONNECTIONS } = require ('./constants.js');
 
 const webdriver = require('selenium-webdriver');
-const logging = require('selenium-webdriver').logging;  
+const logging = require('selenium-webdriver').logging;
 
 const PEER_TEST_APP_URL = "https://peer-test-app.dev.vdb.to/"
 
 async function runTestWithCapabilities (capabilities) {
     var prefs = new logging.Preferences();
     prefs.setLevel(logging.Type.BROWSER, logging.Level.ALL);
-  
+
     const BrowserstackUsername = process.env.BSTACK_USERNAME;
     const BrowserstackAccessKey = process.env.BSTACK_ACCESS_KEY;
 
@@ -25,7 +25,7 @@ async function runTestWithCapabilities (capabilities) {
         })
         .setLoggingPrefs(prefs)
         .build();
-  
+
     try {
         await driver.get(PEER_TEST_APP_URL);
 
@@ -40,7 +40,7 @@ async function runTestWithCapabilities (capabilities) {
             });
         }, 100 * 1000);
 
-        // Fetch peer id 
+        // Fetch peer id
         const peerIdElement = await driver.findElement(webdriver.By.xpath(xpaths.peerIdXpath));
         await driver.wait(async function(){
             return peerIdElement.getText().then(function (peerId){
@@ -67,8 +67,8 @@ async function runTestWithCapabilities (capabilities) {
         await Promise.all([
             trackPeerConnections(peerConnectionsElement, flags),
             floodTest(driver, peerId, flags),
-        ]); 
-            
+        ]);
+
     } catch (e) {
       await driver.executeScript(
         'browserstack_executor: {"action": "setSessionStatus", "arguments": {"status":"failed","reason": "Some elements failed to load!"}}'
@@ -76,5 +76,5 @@ async function runTestWithCapabilities (capabilities) {
     }
     await driver.quit();
 }
-  
+
 module.exports = { runTestWithCapabilities };

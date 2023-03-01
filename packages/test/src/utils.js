@@ -7,7 +7,7 @@ const {
     TEST_RETRIES,
     TEST_INTERVAL,
     TOTAL_PEERS,
-} = require('./constants'); 
+} = require('./constants');
 
 const sleep = sec => new Promise(r => setTimeout(r, sec * 1000));
 
@@ -17,7 +17,7 @@ class ConnectionDropped extends Error {
         this.name = this.constructor.name;
     }
 }
-    
+
 async function getConnections(connectionElement){
     var connections = await connectionElement.getText().then(function (conns){return conns;} );
     return parseInt(connections);
@@ -54,7 +54,7 @@ async function trackPeerConnections (element, flags) {
         }
     }
 }
-  
+
 // Periodically sends and listens for flood messages
 async function floodTest(driver, peerId, flags) {
     const floodFrom = new Map();
@@ -64,9 +64,9 @@ async function floodTest(driver, peerId, flags) {
     try {
         var tryCount = 1;
 
-        // Repeat for specified number of times as long as test is neither successful nor aborted 
+        // Repeat for specified number of times as long as test is neither successful nor aborted
         while (tryCount < TEST_RETRIES && !(flags.testSuccessful || flags.abortTest)) {
-            await driver.executeScript(floodCmd); 
+            await driver.executeScript(floodCmd);
             await sleep(TEST_INTERVAL);
 
             var logEntries = await driver.manage().logs().get(webdriver.logging.Type.BROWSER).then(function (entries) {
@@ -79,24 +79,24 @@ async function floodTest(driver, peerId, flags) {
                 });
                 return logEntries;
             });
-  
+
             logEntries.forEach(async function (entry) {
                 let exists  = floodFrom.get(entry);
                 if(exists){
                     floodFrom.set(entry, exists+1);
                 } else {
                     floodFrom.set(entry,1);
-                } 
+                }
             });
-    
+
             if(floodFrom.size === TOTAL_PEERS) {
                 flags.testSuccessful = true;
                 return;
             }
-            
+
             tryCount++;
         }
-  
+
         if(!flags.testSuccessful){
             driver.executeScript('browserstack_executor: {"action": "setSessionStatus", "arguments": {"status":"failed", "Flood test failed : Did not get flood messages back"');
         }

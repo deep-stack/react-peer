@@ -6,11 +6,11 @@ const capabilities = {
       "os": "Windows",
       "osVersion": "11",
       "browserVersion": "110.0",
-      "buildName" : "Peer-test-automation-build-1",
+      "buildName" : "Automated-peer-test-build-1",
       "sessionName" : "Parallel test 1",
   },
   "browserName": "Chrome"
-};  
+};
 
 async function main() {
   var instances = [];
