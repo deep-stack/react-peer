@@ -6,7 +6,7 @@
     "lint": "eslint .",
     "build": "yarn clean && tsc",
     "clean": "rm -rf ./dist",
-    "test": "node src/index.js"
+    "test": "node dist/index.js"
   },
   "dependencies": {
     "selenium-webdriver": "^4.8.1"

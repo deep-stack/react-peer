@@ -27,7 +27,7 @@ export async function runTestWithCapabilities (capabilities: webdriver.Capabilit
     await driver.get(appURL);
 
     // TODO: Use HTML id tags for selecting elements
-    const xpaths = JSON.parse(fs.readFileSync('elements-xpaths.json').toString());
+    const xpaths = JSON.parse(fs.readFileSync(path.resolve(__dirname, '../elements-xpaths.json')).toString());
 
     // Wait for the peer node to start
     // TODO: Check that awaiting on the element works
