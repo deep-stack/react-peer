@@ -1,10 +1,21 @@
 import path from 'path';
 import * as dotenv from 'dotenv';
 import debug from 'debug';
-import webdriver, { ThenableWebDriver, WebDriver } from 'selenium-webdriver';
+import 'mocha';
+import { expect } from 'chai';
+import webdriver, { WebDriver } from 'selenium-webdriver';
 
-import { startABrowserPeer, waitForConnection, sendFlood, getLogs, sleep, quitBrowsers } from './utils.js';
-import { FLOOD_CHECK_DELAY, TOTAL_PEERS } from './constants.js';
+import {
+  waitForConnection,
+  sendFlood,
+  getLogs,
+  sleep,
+  quitBrowsers,
+  capabilities,
+  setupBrowsersWithCapabilities,
+  SCRIPT_GET_PEER_ID
+} from './utils';
+import { FLOOD_CHECK_DELAY } from './constants';
 
 dotenv.config({ path: path.resolve(__dirname, '../.env') });
 
@@ -12,49 +23,28 @@ const log = debug('laconic:test');
 
 const BSTACK_SERVER_URL = `http://${process.env.BSTACK_USERNAME}:${process.env.BSTACK_ACCESS_KEY}@hub-cloud.browserstack.com/wd/hub`;
 
-export async function setupBrowsersWithCapabilities (capabilities: webdriver.Capabilities): Promise<WebDriver[]> {
-  let peerDrivers: WebDriver[] = [];
+let peerDrivers: WebDriver[] = [];
 
-  try {
-    const peerDriverPromises: Promise<ThenableWebDriver>[] = [];
-    for (let i = 0; i < TOTAL_PEERS; i++) {
-      peerDriverPromises.push(startABrowserPeer(BSTACK_SERVER_URL, capabilities));
-    }
+describe('peer-test', () => {
+  let peerIds: string[];
 
-    peerDrivers = await Promise.all(peerDriverPromises);
-    log('All browser peers started');
-  } catch (err) {
-    log('Setup failed with err:');
-    log(err);
-    peerDrivers.forEach(async (driver) => {
-      await driver.executeScript(
-        'browserstack_executor: {"action": "setSessionStatus", "arguments": {"status":"failed","reason": "Some elements failed to load!"}}'
-      );
-    });
-  }
+  before('setup browsers', async () => {
+    const chromeInWindowsCapabilities = new webdriver.Capabilities(new Map(Object.entries(capabilities)));
+    peerDrivers = await setupBrowsersWithCapabilities(BSTACK_SERVER_URL, chromeInWindowsCapabilities);
 
-  return peerDrivers;
-}
-
-export async function runTestWithCapabilities (peerDrivers: WebDriver[]): Promise<void> {
-  try {
-    const peerIds = await Promise.all(peerDrivers.map((peerDriver): Promise<string> => {
-      return peerDriver.executeScript('return window.peer.peerId?.toString()');
+    peerIds = await Promise.all(peerDrivers.map((peerDriver): Promise<string> => {
+      return peerDriver.executeScript(SCRIPT_GET_PEER_ID);
     }));
+  });
 
-    log('PeerIds', peerIds);
-
-    // Wait for peers to connect to one of the peer ids
+  it('every peer connects to at least one of the simulated peers', async () => {
     await Promise.all(peerDrivers.map((peerDriver): Promise<void> => {
       return waitForConnection(peerDriver, peerIds);
     }));
+  });
 
-    log('All browser peers connected');
-
-    // Skip flood checks if <= 1 peers setup
-    if (TOTAL_PEERS <= 1) {
-      return;
-    }
+  it('peers send and receive flood messages', async () => {
+    // TODO: Skip if total peers <= 1
 
     const expectedFloodMessages: Map<string, string> = new Map();
     const floodMessages = peerIds.map(peerId => {
@@ -69,8 +59,6 @@ export async function runTestWithCapabilities (peerDrivers: WebDriver[]): Promis
       return sendFlood(peerDriver, floodMessages[index]);
     }));
 
-    log('All floods sent');
-
     // Wait before checking for flood messages
     await sleep(FLOOD_CHECK_DELAY);
 
@@ -78,8 +66,6 @@ export async function runTestWithCapabilities (peerDrivers: WebDriver[]): Promis
     const peerLogsEntries = await Promise.all(peerDrivers.map((peerDriver): Promise<string[]> => {
       return getLogs(peerDriver);
     }));
-
-    log('All logs fetched');
 
     peerLogsEntries.forEach((peerLogs, index) => {
       const peerId = peerIds[index];
@@ -99,22 +85,33 @@ export async function runTestWithCapabilities (peerDrivers: WebDriver[]): Promis
         });
       }
 
-      if (expectedFloodMessagesForPeer.size !== 0) {
-        throw new Error(`Messages not received by peer ${peerId}: ${expectedFloodMessagesForPeer} `);
-      }
+      expect(expectedFloodMessagesForPeer, `Messages not received by peer ${peerId}: ${JSON.stringify(expectedFloodMessagesForPeer, null, 2)}`).to.be.empty;
     });
+  });
 
-    log('All checks done');
-  } catch (err) {
-    log('Test failed with err:');
-    log(err);
-    peerDrivers.forEach(async (driver) => {
-      await driver.executeScript(
-        'browserstack_executor: {"action": "setSessionStatus", "arguments": {"status":"failed","reason": "Some elements failed to load!"}}'
-      );
-    });
-  } finally {
+  afterEach(async function () {
+    if (this.currentTest?.state === 'failed') {
+      peerDrivers.forEach(async (driver) => {
+        await driver.executeScript(
+          'browserstack_executor: {"action": "setSessionStatus", "arguments": {"status":"failed","reason": "Some elements failed to load!"}}'
+        );
+      });
+
+      // Quit browser instances
+      await quitBrowsers(peerDrivers);
+    }
+  });
+
+  after(async function () {
     // Quit browser instances
     await quitBrowsers(peerDrivers);
-  }
-}
+  });
+});
+
+process.on('SIGINT', async () => {
+  // Quit browser instances
+  await quitBrowsers(peerDrivers);
+
+  log(`Exiting process ${process.pid} with code 0`);
+  process.exit(0);
+});

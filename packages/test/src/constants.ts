@@ -1,6 +1,6 @@
 // TODO: Accept CLI arguments
 
-export const TOTAL_PEERS = 3;
+export const TOTAL_PEERS = 5;
 
 // Time within which the peer node should be started
 export const NODE_START_TIMEOUT = TOTAL_PEERS * 30 * 1000;

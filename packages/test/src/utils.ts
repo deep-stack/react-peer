@@ -1,11 +1,12 @@
-import webdriver, { WebDriver, logging } from 'selenium-webdriver';
+import webdriver, { ThenableWebDriver, WebDriver, logging } from 'selenium-webdriver';
 import debug from 'debug';
 
 import {
   NODE_START_TIMEOUT,
   NODE_PEER_CONN_TIMEOUT,
   NODE_START_CHECK_INTERVAL,
-  NODE_PEER_CONN_CHECK_INTERVAL
+  NODE_PEER_CONN_CHECK_INTERVAL,
+  TOTAL_PEERS
 } from './constants';
 
 const log = debug('laconic:test');
@@ -13,6 +14,7 @@ const log = debug('laconic:test');
 const ERR_PEER_INIT_TIMEOUT = 'Peer intialization timed out';
 const ERR_PEER_CONNECTIONS = 'Peer connections timed out';
 
+export const SCRIPT_GET_PEER_ID = 'return window.peer.peerId?.toString()';
 const SCRIPT_PEER_INIT = "return (typeof window.peer !== 'undefined') && window.peer.node.isStarted();";
 const SCRIPT_GET_PEER_CONNECTIONS = `return window.peer.node.getConnections().map(connection => {
   return connection.remotePeer.toString();
@@ -20,10 +22,39 @@ const SCRIPT_GET_PEER_CONNECTIONS = `return window.peer.node.getConnections().ma
 
 export const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
 
-export interface TestState {
-  isRetry: boolean;
-  successful: boolean;
-  aborted: boolean;
+export const capabilities = {
+  'bstack:options': {
+    os: 'Windows',
+    osVersion: '11',
+    browserVersion: '110.0',
+    buildName: 'Automated-peer-test-build-1',
+    sessionName: 'Parallel test 1'
+  },
+  browserName: 'Chrome'
+};
+
+export async function setupBrowsersWithCapabilities (serverURL: string, capabilities: webdriver.Capabilities): Promise<WebDriver[]> {
+  let peerDrivers: WebDriver[] = [];
+
+  try {
+    const peerDriverPromises: Promise<ThenableWebDriver>[] = [];
+    for (let i = 0; i < TOTAL_PEERS; i++) {
+      peerDriverPromises.push(startABrowserPeer(serverURL, capabilities));
+    }
+
+    peerDrivers = await Promise.all(peerDriverPromises);
+    log('All browser peers started');
+  } catch (err) {
+    log('Setup failed with err:');
+    log(err);
+    peerDrivers.forEach(async (driver) => {
+      await driver.executeScript(
+        'browserstack_executor: {"action": "setSessionStatus", "arguments": {"status":"failed","reason": "Some elements failed to load!"}}'
+      );
+    });
+  }
+
+  return peerDrivers;
 }
 
 export const startABrowserPeer = async (serverURL: string, capabilities: webdriver.Capabilities): Promise<webdriver.ThenableWebDriver
