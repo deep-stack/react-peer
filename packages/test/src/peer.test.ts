@@ -1,72 +1,109 @@
-import fs from 'fs';
 import path from 'path';
 import * as dotenv from 'dotenv';
-import webdriver, { logging } from 'selenium-webdriver';
+import webdriver, { ThenableWebDriver, WebDriver } from 'selenium-webdriver';
 
-import { TestState, trackPeerConnections, floodTest, getConnections } from './utils.js';
-import { MIN_REQUIRED_CONNECTIONS, NODE_START_TIMEOUT } from './constants.js';
+import { startABrowserPeer, waitForConnection, sendFlood, getLogs, sleep } from './utils.js';
+import { FLOOD_CHECK_DELAY, TOTAL_PEERS } from './constants.js';
 
 dotenv.config({ path: path.resolve(__dirname, '../.env') });
 
-export async function runTestWithCapabilities (capabilities: webdriver.Capabilities) {
-  const prefs = new logging.Preferences();
-  prefs.setLevel(logging.Type.BROWSER, logging.Level.ALL);
+const SERVER_URL = `http://${process.env.BSTACK_USERNAME}:${process.env.BSTACK_ACCESS_KEY}@hub-cloud.browserstack.com/wd/hub`;
 
-  const driver = new webdriver.Builder()
-    .usingServer(`http://${process.env.BSTACK_USERNAME}:${process.env.BSTACK_ACCESS_KEY}@hub-cloud.browserstack.com/wd/hub`)
-    .withCapabilities(capabilities)
-    .setLoggingPrefs(prefs)
-    .build();
+export async function runTestWithCapabilities (capabilities: webdriver.Capabilities): Promise<void> {
+  let peerDrivers: WebDriver[] = [];
 
   try {
-    const appURL = process.env.PEER_TEST_APP_URL;
-    if (!appURL) {
-      throw new Error('App URL not provided');
+    const peerDriverPromises: Promise<ThenableWebDriver>[] = [];
+    for (let i = 0; i < TOTAL_PEERS; i++) {
+      peerDriverPromises.push(startABrowserPeer(SERVER_URL, capabilities));
     }
 
-    await driver.get(appURL);
+    peerDrivers = await Promise.all(peerDriverPromises);
 
-    // TODO: Use HTML id tags for selecting elements
-    const xpaths = JSON.parse(fs.readFileSync(path.resolve(__dirname, '../elements-xpaths.json')).toString());
+    console.log('All browser peers started');
 
-    // Wait for the peer node to start
-    // TODO: Check that awaiting on the element works
-    const nodeStartedElement = await driver.findElement(webdriver.By.xpath(xpaths.nodeStartedXpath));
-    await driver.wait(async () => {
-      const hasNodeStarted = await nodeStartedElement.getText();
-      return hasNodeStarted === 'true';
-    }, NODE_START_TIMEOUT);
+    const peerIds = await Promise.all(peerDrivers.map((peerDriver): Promise<string> => {
+      return peerDriver.executeScript('return window.peer.peerId?.toString()');
+    }));
 
-    // Fetch peer id
-    const peerIdElement = await driver.findElement(webdriver.By.xpath(xpaths.peerIdXpath));
-    await driver.wait(async function () {
-      const peerId = await peerIdElement.getText();
-      return peerId !== '';
-    }, NODE_START_TIMEOUT);
-    const peerId = await peerIdElement.getText();
+    console.log('peerIds', peerIds);
 
-    // Wait for sufficient connections
-    // TODO: Use a better heuristic
-    const peerConnectionsElement = await driver.findElement(webdriver.By.xpath(xpaths.peerConnectionsXpath));
-    await driver.wait(async function () {
-      const connectionCount = await getConnections(peerConnectionsElement);
-      return connectionCount >= MIN_REQUIRED_CONNECTIONS;
-    }, NODE_START_TIMEOUT);
+    // Wait for peers to connect to one of the peer ids
+    await Promise.all(peerDrivers.map((peerDriver): Promise<void> => {
+      return waitForConnection(peerDriver, peerIds);
+    }));
 
-    const testState: TestState = {
-      isRetry: false,
-      successful: false,
-      aborted: false
-    };
+    console.log('All browser peers connected');
 
-    await Promise.all([
-      trackPeerConnections(peerConnectionsElement, testState),
-      floodTest(driver, peerId, testState)
-    ]);
+    // Skip flood checks if <= 1 peers setup
+    if (TOTAL_PEERS <= 1) {
+      return;
+    }
+
+    const expectedFloodMessages: Map<string, string> = new Map();
+    const floodMessages = peerIds.map(peerId => {
+      const msg = `This is ${peerId}`;
+      expectedFloodMessages.set(peerId, `${peerId} > ${msg}`);
+
+      return msg;
+    });
+
+    // Send flood messages
+    await Promise.all(peerDrivers.map((peerDriver, index): Promise<void> => {
+      return sendFlood(peerDriver, floodMessages[index]);
+    }));
+
+    console.log('All floods sent');
+
+    // Wait before checking for flood messages
+    await sleep(FLOOD_CHECK_DELAY);
+
+    // Check that flood has been received by all the peers
+    const peerLogsEntries = await Promise.all(peerDrivers.map((peerDriver): Promise<string[]> => {
+      return getLogs(peerDriver);
+    }));
+
+    console.log('All logs fetched');
+
+    peerLogsEntries.forEach((peerLogs, index) => {
+      const peerId = peerIds[index];
+
+      const expectedFloodMessagesForPeer = new Map(expectedFloodMessages);
+      expectedFloodMessagesForPeer.delete(peerId); // Avoid messages from self
+
+      console.log('logs for', peerId);
+      console.log(peerLogs);
+      console.log('expected logs', expectedFloodMessagesForPeer);
+
+      for (const log of peerLogs) {
+        if (expectedFloodMessagesForPeer.size === 0) {
+          break;
+        }
+
+        expectedFloodMessagesForPeer.forEach((value, key) => {
+          if (log.includes(value)) {
+            expectedFloodMessagesForPeer.delete(key);
+          }
+        });
+      }
+
+      if (expectedFloodMessagesForPeer.size !== 0) {
+        throw new Error(`Message ${expectedFloodMessagesForPeer} not received by peer ${peerId}`);
+      }
+    });
+
+    console.log('All checks done');
   } catch (err) {
-    await driver.executeScript(
-      'browserstack_executor: {"action": "setSessionStatus", "arguments": {"status":"failed","reason": "Some elements failed to load!"}}'
-    );
+    console.log('Test failed with err:');
+    console.log(err);
+    peerDrivers.forEach(async (driver) => {
+      await driver.executeScript(
+        'browserstack_executor: {"action": "setSessionStatus", "arguments": {"status":"failed","reason": "Some elements failed to load!"}}'
+      );
+    });
+  } finally {
+    // Quit browser instances
+    console.log('Stopping all browser instances');
+    await Promise.all(peerDrivers.map(peerDriver => peerDriver.quit()));
   }
-  await driver.quit();
 }

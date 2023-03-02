@@ -1,7 +1,6 @@
 import webdriver from 'selenium-webdriver';
 
 import { runTestWithCapabilities } from './peer.test.js';
-import { TOTAL_PEERS } from './constants';
 
 const capabilities = {
   'bstack:options': {
@@ -18,12 +17,7 @@ const capabilities = {
 async function main () {
   // Launch browser instances on Browserstack
   const chromeInWindowsCapabilities = new webdriver.Capabilities(new Map(Object.entries(capabilities)));
-  const instances = [];
-  for (let i = 0; i < TOTAL_PEERS; i++) {
-    instances.push(runTestWithCapabilities(chromeInWindowsCapabilities));
-  }
-
-  await Promise.all(instances);
+  await runTestWithCapabilities(chromeInWindowsCapabilities);
 }
 
 main().catch(err => {
@@ -31,3 +25,9 @@ main().catch(err => {
 }).finally(() => {
   process.exit();
 });
+
+// TODO: Stop browser instances on SIGINT
+// process.on('SIGINT', () => {
+//   log(`Exiting process ${process.pid} with code 0`);
+//   process.exit(0);
+// });

@@ -9,4 +9,8 @@ export const WAIT_BEFORE_RETRY = 10; // seconds
 export const CHECK_CONNECTION_INTERVAL = 3; // seconds
 
 // Time within which the peer node should be started
-export const NODE_START_TIMEOUT = 100 * 1000; // 100s
+export const NODE_START_TIMEOUT = 120 * 1000; // 120s
+export const NODE_START_CHECK_INTERVAL = 5 * 1000; // 5s
+export const NODE_PEER_CONN_TIMEOUT = 30 * 1000; // 30s
+export const NODE_PEER_CONN_CHECK_INTERVAL = 5 * 1000; // 5s
+export const FLOOD_CHECK_DELAY = 10 * 1000; // 10s
