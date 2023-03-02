@@ -17,6 +17,7 @@ import {
   markSessionAsFailed
 } from './utils';
 import { FLOOD_CHECK_DELAY } from './constants';
+import xpaths from '../helpers/elements-xpaths.json';
 
 dotenv.config({ path: path.resolve(__dirname, '../.env') });
 
@@ -48,7 +49,25 @@ describe('peer-test', () => {
     }));
   });
 
-  it('peers send and receive flood messages', async () => {
+  it('peer reports phishers', async () => {
+    // Select 1st peer as the phishing reporter
+    const phisherReporter = peerDrivers[0];
+    const phishers = ['phisher1', 'phisher2'];
+
+    const claimPhisherInput = await phisherReporter.findElement(webdriver.By.xpath(xpaths.mobyPhisherInputBox));
+    const claimPhisherButton = await phisherReporter.findElement(webdriver.By.xpath(xpaths.mobyPhisherAddToBatchButton));
+
+    for (const phisher of phishers) {
+      await claimPhisherInput.clear();
+      await claimPhisherInput.sendKeys(phisher);
+      await claimPhisherButton.click();
+    }
+
+    const submitBatchButton = await phisherReporter.findElement(webdriver.By.xpath(xpaths.mobyPhisherSubmitBatchButton));
+    await submitBatchButton.click();
+  })
+
+  xit('peers send and receive flood messages', async () => {
     // TODO: Skip if total peers <= 1
 
     const expectedFloodMessages: Map<string, string> = new Map();

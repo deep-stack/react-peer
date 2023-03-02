@@ -1,0 +1,11 @@
+{
+	"mobyDebugPanelOpen": "//button[@data-ref='debug.open']",
+	"mobyDebugPanelClose": "//button[@data-ref='debug.close']",
+	"mobyPhisherInputBox": "//input[@data-ref='phishers.input']",
+	"mobyPhisherAddToBatchButton": "//button[@data-ref='phishers.addBatch']",
+	"mobyPhisherSubmitBatchButton": "//button[@data-ref='phishers.submitBatch']",
+	"mobyMemberInputBox": "//input[@data-ref='members.input']",
+	"mobyMemberSubmitBatchButton": "//input[@data-ref='members.input']/following-sibling::*[1]",
+	"mobyMemberCreateInvite": "//button[@data-ref='member.invite.create']",
+	"mobyMemberRevokeInvite": "//button[@data-ref='member.invite.revoke']"
+}
