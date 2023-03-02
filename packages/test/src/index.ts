@@ -1,6 +1,10 @@
-import webdriver from 'selenium-webdriver';
+import webdriver, { WebDriver } from 'selenium-webdriver';
+import debug from 'debug';
 
-import { runTestWithCapabilities } from './peer.test.js';
+import { runTestWithCapabilities, setupBrowsersWithCapabilities } from './peer.test.js';
+import { quitBrowsers } from './utils.js';
+
+const log = debug('laconic:test');
 
 const capabilities = {
   'bstack:options': {
@@ -13,21 +17,26 @@ const capabilities = {
   browserName: 'Chrome'
 };
 
+let peerDrivers: WebDriver[] = [];
+
 // TODO: Test with mobymask app
 async function main () {
   // Launch browser instances on Browserstack
   const chromeInWindowsCapabilities = new webdriver.Capabilities(new Map(Object.entries(capabilities)));
-  await runTestWithCapabilities(chromeInWindowsCapabilities);
+  peerDrivers = await setupBrowsersWithCapabilities(chromeInWindowsCapabilities);
+  await runTestWithCapabilities(peerDrivers);
 }
 
 main().catch(err => {
-  console.log(err);
+  log(err);
 }).finally(() => {
   process.exit();
 });
 
-// TODO: Stop browser instances on SIGINT
-// process.on('SIGINT', () => {
-//   log(`Exiting process ${process.pid} with code 0`);
-//   process.exit(0);
-// });
+process.on('SIGINT', async () => {
+  // Quit browser instances
+  await quitBrowsers(peerDrivers);
+
+  log(`Exiting process ${process.pid} with code 0`);
+  process.exit(0);
+});

@@ -1,4 +1,5 @@
 import webdriver, { WebDriver, logging } from 'selenium-webdriver';
+import debug from 'debug';
 
 import {
   NODE_START_TIMEOUT,
@@ -6,6 +7,8 @@ import {
   NODE_START_CHECK_INTERVAL,
   NODE_PEER_CONN_CHECK_INTERVAL
 } from './constants';
+
+const log = debug('laconic:test');
 
 const ERR_PEER_INIT_TIMEOUT = 'Peer intialization timed out';
 const ERR_PEER_CONNECTIONS = 'Peer connections timed out';
@@ -34,7 +37,7 @@ export const startABrowserPeer = async (serverURL: string, capabilities: webdriv
     .setLoggingPrefs(prefs)
     .build();
 
-  const appURL = process.env.PEER_TEST_APP_URL;
+  const appURL = process.env.TEST_APP_URL;
   if (!appURL) {
     throw new Error('App URL not provided');
   }
@@ -81,4 +84,9 @@ export const sendFlood = async (peerDriver: WebDriver, msg: string): Promise<voi
 export const getLogs = async (peerDriver: WebDriver): Promise<string[]> => {
   const logEntries = await peerDriver.manage().logs().get(webdriver.logging.Type.BROWSER);
   return logEntries.map(log => log.message);
+};
+
+export const quitBrowsers = async (peerDrivers: WebDriver[]): Promise<void> => {
+  log('Stopping all browser instances');
+  await Promise.all(peerDrivers.map(peerDriver => peerDriver.quit()));
 };
