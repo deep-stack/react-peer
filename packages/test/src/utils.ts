@@ -11,6 +11,9 @@ import {
 
 const log = debug('laconic:test');
 
+export const TEST_APP_URL = process.env.TEST_APP_URL;
+export const TEST_APP_MEMBER_URL = process.env.TEST_APP_MEMBER_URL;
+
 const ERR_PEER_INIT_TIMEOUT = 'Peer intialization timed out';
 const ERR_PEER_CONNECTIONS = 'Peer connections timed out';
 
@@ -69,12 +72,12 @@ export const startABrowserPeer = async (serverURL: string, capabilities: webdriv
     .setLoggingPrefs(prefs)
     .build();
 
-  const appURL = process.env.TEST_APP_URL;
+  const appURL = TEST_APP_URL;
   if (!appURL) {
     throw new Error('App URL not provided');
   }
 
-  await driver.get(appURL);
+  await navigateURL(driver, appURL);
 
   // Wait for the peer node to start
   const condition = new webdriver.Condition('peer initialization', (driver) => {
@@ -84,6 +87,10 @@ export const startABrowserPeer = async (serverURL: string, capabilities: webdriv
 
   return driver;
 };
+
+export const navigateURL = async (peerDriver: WebDriver, url: string): Promise<void> => {
+  return peerDriver.get(url);
+}
 
 // Wait for the peer node to be connected to one of the provided peer ids
 export const waitForConnection = async (peerDriver: WebDriver, peerIds: string[]): Promise<void> => {

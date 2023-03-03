@@ -14,7 +14,9 @@ import {
   capabilities,
   setupBrowsersWithCapabilities,
   SCRIPT_GET_PEER_ID,
-  markSessionAsFailed
+  markSessionAsFailed,
+  TEST_APP_MEMBER_URL,
+  navigateURL
 } from './utils';
 import { FLOOD_CHECK_DELAY } from './constants';
 import xpaths from '../helpers/elements-xpaths.json';
@@ -52,6 +54,13 @@ describe('peer-test', () => {
   it('peer reports phishers', async () => {
     // Select 1st peer as the phishing reporter
     const phisherReporter = peerDrivers[0];
+
+    // Navigate to member's page
+    if (!TEST_APP_MEMBER_URL) {
+      throw new Error('App URL not provided');
+    }
+    await navigateURL(phisherReporter, TEST_APP_MEMBER_URL);
+
     const phishers = ['phisher1', 'phisher2'];
 
     const claimPhisherInput = await phisherReporter.findElement(webdriver.By.xpath(xpaths.mobyPhisherInputBox));

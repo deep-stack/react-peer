@@ -10,7 +10,7 @@
   cp .env.example .env
   ```
 
-* Update `.env` with your Browserstack credentials and the app URL
+* Update `.env` with your Browserstack credentials and the app URL(s)
 
 * Install dependencies:
 
