@@ -74,6 +74,7 @@ describe('peer-test', () => {
     }));
 
     // Test input values
+    // TODO: Generate random names
     const phishers = ['phisher1', 'phisher2'];
     const expectedPhisherReports = phishers.map(phisher => `method: claimIfPhisher, value: TWT:${phisher}`);
 
@@ -107,9 +108,52 @@ describe('peer-test', () => {
 
       const messages = await messageBlock.getText();
 
-      // Check if message include the phisher reports
+      // Check if message includes the phisher reports
       for (const expectedPhisherReport of expectedPhisherReports) {
         expect(messages).to.include(expectedPhisherReport);
+      }
+    }));
+  });
+
+  it('peers send and receive member endorsements', async () => {
+    // To be run along with the above test
+
+    // Select first peer as the phishing reporter, rest as report receivers
+    const reportSender = peerDrivers[0];
+    const reportReceivers = peerDrivers.slice(1);
+
+    // Test input values
+    const members = ['member1', 'member2'];
+    const expectedMemberEndorsements = members.map(member => `method: claimIfMember, value: TWT:${member}`);
+
+    // Load members elements
+    const claimMemberInput = await reportSender.findElement(webdriver.By.xpath(xpaths.mobyMemberInputBox));
+    const claimMemberButton = await reportSender.findElement(webdriver.By.xpath(xpaths.mobyMemberAddToBatchButton));
+
+    // Populate member input boxes
+    for (const member of members) {
+      await claimMemberInput.clear();
+      await claimMemberInput.sendKeys(member);
+      await claimMemberButton.click();
+    }
+
+    // Submit batch of members to p2p network
+    const submitMemberBatchButton = await reportSender.findElement(webdriver.By.xpath(xpaths.mobyMemberSubmitBatchButton));
+    await submitMemberBatchButton.click();
+
+    // Wait before checking for flood messages
+    await sleep(FLOOD_CHECK_DELAY);
+
+    await Promise.all(reportReceivers.map(async (reportReceiver) => {
+      // Access message block
+      const messageBlock = await reportReceiver.findElement(webdriver.By.xpath(xpaths.mobyDebugMessageBlock));
+
+      // Read all the messsages received
+      const messages = await messageBlock.getText();
+
+      // Check if message includes the member endorsements
+      for (const expectedMemberEndorsement of expectedMemberEndorsements) {
+        expect(messages).to.include(expectedMemberEndorsement);
       }
     }));
   });
