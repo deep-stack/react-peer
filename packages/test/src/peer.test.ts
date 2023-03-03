@@ -13,7 +13,8 @@ import {
   quitBrowsers,
   capabilities,
   setupBrowsersWithCapabilities,
-  SCRIPT_GET_PEER_ID
+  SCRIPT_GET_PEER_ID,
+  markSessionAsFailed
 } from './utils';
 import { FLOOD_CHECK_DELAY } from './constants';
 
@@ -29,12 +30,16 @@ describe('peer-test', () => {
   let peerIds: string[];
 
   before('setup browsers', async () => {
+    log('Setting up the browsers')
+
     const chromeInWindowsCapabilities = new webdriver.Capabilities(new Map(Object.entries(capabilities)));
     peerDrivers = await setupBrowsersWithCapabilities(BSTACK_SERVER_URL, chromeInWindowsCapabilities);
 
     peerIds = await Promise.all(peerDrivers.map((peerDriver): Promise<string> => {
       return peerDriver.executeScript(SCRIPT_GET_PEER_ID);
     }));
+
+    log('Setup done')
   });
 
   it('every peer connects to at least one of the simulated peers', async () => {
@@ -91,11 +96,8 @@ describe('peer-test', () => {
 
   afterEach(async function () {
     if (this.currentTest?.state === 'failed') {
-      peerDrivers.forEach(async (driver) => {
-        await driver.executeScript(
-          'browserstack_executor: {"action": "setSessionStatus", "arguments": {"status":"failed","reason": "Some elements failed to load!"}}'
-        );
-      });
+      // Mark the Browserstack sessions as failed
+      await markSessionAsFailed(peerDrivers);
 
       // Quit browser instances
       await quitBrowsers(peerDrivers);
@@ -103,6 +105,11 @@ describe('peer-test', () => {
   });
 
   after(async function () {
+    if (this.currentTest?.state === 'failed') {
+      // Mark the Browserstack sessions as failed
+      await markSessionAsFailed(peerDrivers);
+    }
+
     // Quit browser instances
     await quitBrowsers(peerDrivers);
   });

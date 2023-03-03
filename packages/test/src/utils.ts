@@ -45,13 +45,14 @@ export async function setupBrowsersWithCapabilities (serverURL: string, capabili
     peerDrivers = await Promise.all(peerDriverPromises);
     log('All browser peers started');
   } catch (err) {
-    log('Setup failed with err:');
-    log(err);
+    log('Setup failed');
     peerDrivers.forEach(async (driver) => {
       await driver.executeScript(
         'browserstack_executor: {"action": "setSessionStatus", "arguments": {"status":"failed","reason": "Some elements failed to load!"}}'
       );
     });
+
+    throw err;
   }
 
   return peerDrivers;
@@ -120,4 +121,13 @@ export const getLogs = async (peerDriver: WebDriver): Promise<string[]> => {
 export const quitBrowsers = async (peerDrivers: WebDriver[]): Promise<void> => {
   log('Stopping all browser instances');
   await Promise.all(peerDrivers.map(peerDriver => peerDriver.quit()));
+};
+
+export const markSessionAsFailed = async (peerDrivers: WebDriver[]): Promise<void> => {
+  log('Setting the status to failed');
+  await Promise.all(peerDrivers.map(async (peerDriver) => {
+    await peerDriver.executeScript(
+      'browserstack_executor: {"action": "setSessionStatus", "arguments": {"status":"failed","reason": "Some elements failed to load!"}}'
+    );
+  }));
 };
