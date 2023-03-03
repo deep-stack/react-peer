@@ -5,7 +5,11 @@
 	"mobyPhisherAddToBatchButton": "//button[@data-ref='phishers.addBatch']",
 	"mobyPhisherSubmitBatchButton": "//button[@data-ref='phishers.submitBatch']",
 	"mobyMemberInputBox": "//input[@data-ref='members.input']",
-	"mobyMemberSubmitBatchButton": "//input[@data-ref='members.input']/following-sibling::*[1]",
+	"mobyMemberAddToBatchButton": "//input[@data-ref='members.input']/following-sibling::*[1]",
 	"mobyMemberCreateInvite": "//button[@data-ref='member.invite.create']",
-	"mobyMemberRevokeInvite": "//button[@data-ref='member.invite.revoke']"
+	"mobyMemberRevokeInvite": "//button[@data-ref='member.invite.revoke']",
+	"mobyDebugMessageBlock": "//div[@class='MuiBox-root css-1ed6yqy']",
+	"mobyDebugMessagePanelButton": "//button[@data-ref='debug.messages']",
+	"mobyDebugMessages": "//div[@class='MuiBox-root css-1ed6yqy']//div",
+	"mobyMemberSubmitBatchButton": "//div[@class='members']//div[1]/div[1]/button"
 }

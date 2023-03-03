@@ -51,30 +51,68 @@ describe('peer-test', () => {
     }));
   });
 
-  it('peer reports phishers', async () => {
-    // Select 1st peer as the phishing reporter
-    const phisherReporter = peerDrivers[0];
-
-    // Navigate to member's page
+  it('peers send and receive phisher reports', async () => {
     if (!TEST_APP_MEMBER_URL) {
-      throw new Error('App URL not provided');
+      throw new Error('App URL (member) not provided');
     }
-    await navigateURL(phisherReporter, TEST_APP_MEMBER_URL);
 
+    // Select first peer as the phishing reporter, rest as report receivers
+    const reportSender = peerDrivers[0];
+    const reportReceivers = peerDrivers.slice(1);
+
+    // Navigate to app url
+    await navigateURL(reportSender, TEST_APP_MEMBER_URL);
+
+    await Promise.all(reportReceivers.map(async (reportReceiver): Promise<void> => {
+      // Open debug panel
+      const debugButton = await reportReceiver.findElement(webdriver.By.xpath(xpaths.mobyDebugPanelOpen));
+      await debugButton.click();
+
+      // Switch to messages pane
+      const messagesPaneButton = await reportReceiver.findElement(webdriver.By.xpath(xpaths.mobyDebugMessagePanelButton));
+      await messagesPaneButton.click();
+    }));
+
+    // Test input values
     const phishers = ['phisher1', 'phisher2'];
+    const expectedPhisherReports = phishers.map(phisher => `method: claimIfPhisher, value: TWT:${phisher}`);
 
-    const claimPhisherInput = await phisherReporter.findElement(webdriver.By.xpath(xpaths.mobyPhisherInputBox));
-    const claimPhisherButton = await phisherReporter.findElement(webdriver.By.xpath(xpaths.mobyPhisherAddToBatchButton));
+    // Load phishers elements
+    const claimPhisherInput = await reportSender.findElement(webdriver.By.xpath(xpaths.mobyPhisherInputBox));
+    const claimPhisherButton = await reportSender.findElement(webdriver.By.xpath(xpaths.mobyPhisherAddToBatchButton));
 
+    // Populate phisher input boxes
     for (const phisher of phishers) {
       await claimPhisherInput.clear();
       await claimPhisherInput.sendKeys(phisher);
       await claimPhisherButton.click();
     }
 
-    const submitBatchButton = await phisherReporter.findElement(webdriver.By.xpath(xpaths.mobyPhisherSubmitBatchButton));
-    await submitBatchButton.click();
-  })
+    // Submit batch of phishers to p2p network
+    const submitPhisherBatchButton = await reportSender.findElement(webdriver.By.xpath(xpaths.mobyPhisherSubmitBatchButton));
+    await submitPhisherBatchButton.click();
+
+    // Wait before checking for flood messages
+    await sleep(FLOOD_CHECK_DELAY);
+
+    await Promise.all(reportReceivers.map(async (reportReceiver) => {
+      // Access message block
+      const messageBlock = await reportReceiver.findElement(webdriver.By.xpath(xpaths.mobyDebugMessageBlock));
+
+      // Wait for it to be populated within a timeout
+      await reportReceiver.wait(async () => {
+        const msgs = await messageBlock.getText();
+        return msgs !== '';
+      }, FLOOD_CHECK_DELAY);
+
+      const messages = await messageBlock.getText();
+
+      // Check if message include the phisher reports
+      for (const expectedPhisherReport of expectedPhisherReports) {
+        expect(messages).to.include(expectedPhisherReport);
+      }
+    }));
+  });
 
   xit('peers send and receive flood messages', async () => {
     // TODO: Skip if total peers <= 1
