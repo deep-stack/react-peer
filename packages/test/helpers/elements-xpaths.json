@@ -1,15 +1,19 @@
 {
 	"mobyDebugPanelOpen": "//button[@data-ref='debug.open']",
 	"mobyDebugPanelClose": "//button[@data-ref='debug.close']",
+
+	"mobyDebugMessagePanelButton": "//button[@data-ref='debug.messages']",
+	"mobyDebugMessageBlock": "//div[@class='MuiBox-root css-1ed6yqy']",
+	"mobyDebugMessages": "//div[@class='MuiBox-root css-1ed6yqy']//div",
+
 	"mobyPhisherInputBox": "//input[@data-ref='phishers.input']",
 	"mobyPhisherAddToBatchButton": "//button[@data-ref='phishers.addBatch']",
 	"mobyPhisherSubmitBatchButton": "//button[@data-ref='phishers.submitBatch']",
+
 	"mobyMemberInputBox": "//input[@data-ref='members.input']",
-	"mobyMemberAddToBatchButton": "//input[@data-ref='members.input']/following-sibling::*[1]",
+	"mobyMemberAddToBatchButton": "//button[@data-ref='members.addBatch']",
 	"mobyMemberCreateInvite": "//button[@data-ref='member.invite.create']",
 	"mobyMemberRevokeInvite": "//button[@data-ref='member.invite.revoke']",
-	"mobyDebugMessageBlock": "//div[@class='MuiBox-root css-1ed6yqy']",
-	"mobyDebugMessagePanelButton": "//button[@data-ref='debug.messages']",
-	"mobyDebugMessages": "//div[@class='MuiBox-root css-1ed6yqy']//div",
-	"mobyMemberSubmitBatchButton": "//div[@class='members']//div[1]/div[1]/button"
+	"mobyMemberSubmitBatchButton": "//button[@data-ref='members.submitBatch']",
+	"mobyMemberInviteLink":"//button[@data-ref='member.invite.link']"
 }

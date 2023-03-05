@@ -3,7 +3,7 @@ import * as dotenv from 'dotenv';
 import debug from 'debug';
 import 'mocha';
 import { expect } from 'chai';
-import webdriver, { WebDriver } from 'selenium-webdriver';
+import webdriver, { until, WebDriver } from 'selenium-webdriver';
 
 import {
   waitForConnection,
@@ -18,7 +18,7 @@ import {
   TEST_APP_MEMBER_URL,
   navigateURL
 } from './utils';
-import { FLOOD_CHECK_DELAY } from './constants';
+import { FLOOD_CHECK_DELAY, MS_IN_SECOND } from './constants';
 import xpaths from '../helpers/elements-xpaths.json';
 
 dotenv.config({ path: path.resolve(__dirname, '../.env') });
@@ -146,6 +146,7 @@ describe('peer-test', () => {
 
     await Promise.all(reportReceivers.map(async (reportReceiver) => {
       // Access message block
+      // TODO: Use an array list of arrived messages instead of message block
       const messageBlock = await reportReceiver.findElement(webdriver.By.xpath(xpaths.mobyDebugMessageBlock));
 
       // Read all the messsages received
@@ -156,6 +157,30 @@ describe('peer-test', () => {
         expect(messages).to.include(expectedMemberEndorsement);
       }
     }));
+  });
+
+  it('members can create invite links for other peers', async() => {
+    // TODO: To be run after above tests, since invitee peer might be directed to a different peer
+
+    // Select first peer as the phishing reporter, rest as report receivers
+    const inviteCreator = peerDrivers[0];
+    const invitee = peerDrivers[1];
+
+    const createInviteButton = await inviteCreator.findElement(webdriver.By.xpath(xpaths.mobyMemberCreateInvite));
+    await createInviteButton.click();
+
+    // Create invite link for isMember1
+    await inviteCreator.switchTo().alert().sendKeys("Member1");
+    await inviteCreator.switchTo().alert().accept();
+
+    await inviteCreator.switchTo().alert().accept();
+
+    const outstandingLinkElements = await inviteCreator.findElements(webdriver.By.xpath(xpaths.mobyMemberInviteLink));
+    const latestLink = await outstandingLinkElements.slice(-1)[0].getText();
+
+    // Let invitee peer navigate to the created invite link
+    await navigateURL(invitee, latestLink);
+    expect(await invitee.wait(until.elementsLocated(webdriver.By.xpath(xpaths.mobyMemberCreateInvite)), 10 * MS_IN_SECOND)).to.not.throw();
   });
 
   xit('peers send and receive flood messages', async () => {
