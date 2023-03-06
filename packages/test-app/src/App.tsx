@@ -1,5 +1,12 @@
 import React, { useContext, useEffect } from 'react';
-import { PeerContext, Metrics, SelfInfo, Connections, PeerNetwork } from '@cerc-io/react-peer'
+import {
+  PeerContext,
+  Metrics,
+  SelfInfo,
+  Connections,
+  NetworkGraph,
+  PeersGraph
+} from '@cerc-io/react-peer'
 
 import { Peer } from '@cerc-io/peer';
 import { createTheme, ThemeProvider } from '@mui/material/styles';
@@ -32,7 +39,7 @@ const STYLES = {
 declare global {
   interface Window {
     broadcast: (message: string) => void;
-    flood: (message: string) => Promise<void>;
+    floodMessage: (message: string) => Promise<void>;
     peer: Peer;
   }
 }
@@ -64,7 +71,7 @@ function App() {
       console.log(`${peerId.toString()} > ${data}`)
     })
 
-    window.flood = async (message: string) => {
+    window.floodMessage = async (message: string) => {
       return peer.floodMessage(TEST_TOPIC, message)
     }
 
@@ -95,8 +102,8 @@ function App() {
           </Card>
           <Card sx={STYLES.debugCard} raised>
             <CardContent sx={STYLES.cardContent}>
-              <Typography><b>Graph</b></Typography>
-              <PeerNetwork />
+              <Typography><b>Graph (Peers)</b></Typography>
+              <PeersGraph />
             </CardContent>
           </Card>
           <Card sx={STYLES.debugCard} raised>
@@ -110,6 +117,14 @@ function App() {
               <Metrics />
             </CardContent>
           </Card>
+          {Boolean(config.peer.enableDebugInfo) && (
+            <Card sx={STYLES.debugCard} raised>
+              <CardContent sx={STYLES.cardContent}>
+                <Typography><b>Graph (Network)</b></Typography>
+                <NetworkGraph />
+              </CardContent>
+            </Card>
+          )}
         </Box>
       </main>
     </ThemeProvider>

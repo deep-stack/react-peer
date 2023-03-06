@@ -3,4 +3,5 @@ export { PeerProvider } from './context/PeerProvider';
 export { Metrics } from './components/Metrics';
 export { SelfInfo } from './components/SelfInfo';
 export { Connections } from './components/Connections';
-export { PeerNetwork } from './components/PeerNetwork';
+export { PeersGraph } from './components/PeersGraph';
+export { NetworkGraph } from './components/NetworkGraph';

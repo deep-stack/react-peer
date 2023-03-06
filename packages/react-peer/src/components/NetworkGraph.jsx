@@ -1,177 +1,126 @@
-import React, { useCallback, useEffect, useState } from 'react';
-import { Graph } from 'react-d3-graph';
-import { Box, Popover, Table, TableBody, TableCell, TableContainer, TableRow, Typography } from '@mui/material';
-import { getPseudonymForPeerId } from '@cerc-io/peer';
+import React, { useState, useCallback, useContext, useEffect, useMemo } from 'react';
 
-// Graph configuration.
-const GRAPH_CONFIG = {
-  nodeHighlightBehavior: true,
-  node: {
-      color: 'blue',
-      size: 1000,
-      fontSize: 14,
-      labelProperty: ({ id, color }) => {
-        switch (color) {
-          case 'red':
-            return 'Self';
-        
-          case 'green':
-            return 'Relay (primary)';
-    
-          case 'blue':
-            return 'Peer';
-          
-          case 'yellow':
-            return 'Relay (secondary)';
-    
-          default:
-            return id;
-        }
-      }
+import { Box } from '@mui/material';
+import ScopedCssBaseline from '@mui/material/ScopedCssBaseline';
+import LoadingButton from '@mui/lab/LoadingButton';
+
+import { PeerContext } from '../context/PeerContext';
+import { DEFAULT_REFRESH_INTERVAL, THROTTLE_WAIT_TIME } from '../constants';
+import GraphWithTooltip from './GraphWithTooltip';
+import { useThrottledCallback } from '../hooks/throttledCallback';
+import { updateGraphDataWithDebugInfo } from '../utils';
+
+const STYLES = {
+  container: {
+    position: 'relative'
   },
-  link: {
-    color: 'grey'
-  },
-  directed: false,
-  collapsible: false,
-  d3: {
-    gravity: -1000
-  },
-  // https://github.com/danielcaldas/react-d3-graph/issues/23#issuecomment-338308398
-  // height: 'calc(50vh - 16px - 32px - 32px)',
-  // width: '100%'
-  height: (window.innerHeight / 2) - 80,
-  width: window.innerWidth - 64
-};
-
-function NetworkGraph ({ peer, connections }) {
-  const links = [];
-  const relayMultiaddr = peer.relayNodeMultiaddr
-  const [anchorEl, setAnchorEl] = useState(null)
-  const [hoveredPeer, setHoveredPeer] = useState(null)
-  const [prevConnections, setPrevConnections] = useState(connections.map(connection => connection.id))
-  const [graphKey, setGraphKey] = useState('')
-
-  // Issue with links in graph not getting removed after disconnect
-  // Workaround to re render graph after disconnects between peers
-  useEffect(() => {
-    const connectionIds = connections.map(connection => connection.id)
-    // Compare connections and check if any previous connection missing
-    const isConnectionMissing = prevConnections.some(connectionId => !connectionIds.includes(connectionId));
-    
-    if (isConnectionMissing) {
-      setGraphKey(JSON.stringify(connectionIds));
-    }
-
-    return () => {
-      setPrevConnections(connections.map(connection => connection.id))
-    }
-  }, [connections])
-
-  const remotePeerNodes = connections.map(connection => {
-    const connectionMultiAddr = connection.remoteAddr
-    
-    const nodeData = {
-      id: connection.remotePeer.toString(),
-      multiaddr: connectionMultiAddr.toString(),
-      color: 'blue'
-    }
-    
-    if (peer.isRelayPeerMultiaddr(connectionMultiAddr.toString())) {
-      links.push({ source: peer.peerId.toString(), target: connection.remotePeer.toString() })
-      
-      nodeData.color = 'yellow';
-
-      if (connectionMultiAddr.equals(relayMultiaddr)) {
-        nodeData.color = 'green';
-      }
-    } else {
-      // If relayed connection
-      if (connectionMultiAddr.protoNames().includes('p2p-circuit')) {
-        const relayPeerId = connectionMultiAddr.decapsulate('p2p-circuit/p2p').getPeerId();
-        links.push({ source: relayPeerId.toString(), target: connection.remotePeer.toString() });
-      } else {
-        links.push({ source: peer.peerId.toString(), target: connection.remotePeer.toString() });
-      }
-    }
-  
-    return nodeData;
-  })
-
-  const onMouseOverNode = useCallback((nodeId) => {
-    let multiaddrs = peer.node.getMultiaddrs().map(multiaddr => multiaddr.toString());
-
-    if (nodeId !== peer.peerId.toString()) {
-      const remotePeerNode = remotePeerNodes.find(remotePeerNode => remotePeerNode.id === nodeId);
-      multiaddrs = [remotePeerNode.multiaddr];
-    }
-
-    setHoveredPeer({
-      id: nodeId,
-      multiaddrs
-    });
-
-    setAnchorEl(document.getElementById(nodeId));
-  }, [peer, remotePeerNodes])
-
-  const data = {
-    nodes: [
-      {
-        id: peer.peerId.toString(),
-        color: 'red'
-      },
-      ...remotePeerNodes
-    ],
-    links
-  };
-
-  return (
-    <Box>
-      <Graph
-        key={graphKey}
-        id="network-graph"
-        data={data}
-        config={GRAPH_CONFIG}
-        onMouseOverNode={onMouseOverNode}
-        onMouseOutNode={() => setAnchorEl(null)}
-      />
-      <Popover
-        id="mouse-over-popover"
-        sx={{
-          pointerEvents: 'none',
-        }}
-        open={Boolean(anchorEl)}
-        anchorEl={anchorEl}
-        onClose={() => setAnchorEl(null)}
-        disableRestoreFocus
-        anchorOrigin={{
-          vertical: 'bottom',
-          horizontal: 'center',
-        }}
-        transformOrigin={{
-          vertical: 'top',
-          horizontal: 'center',
-        }}
-      >
-        <TableContainer>
-          <Table size="small">
-            <TableBody>
-              <TableRow>
-                <TableCell size="small"><b>Peer ID</b></TableCell>
-                <TableCell size="small">{hoveredPeer && `${hoveredPeer.id} ( ${getPseudonymForPeerId(hoveredPeer.id)} )`}</TableCell>
-              </TableRow>
-              <TableRow>
-                <TableCell size="small"><b>Multiaddr</b></TableCell>
-                <TableCell size="small">
-                  {hoveredPeer && hoveredPeer.multiaddrs.map(multiaddr => (<Typography key={multiaddr} variant="body2">{multiaddr}</Typography>))}
-                </TableCell>
-              </TableRow>
-            </TableBody>
-          </Table>
-        </TableContainer>
-      </Popover>
-    </Box>
-  )
+  udpateButton: {
+    position: 'absolute',
+    left: 0,
+    top: 0
+  }
 }
 
-export default NetworkGraph;
+export function NetworkGraph ({ refreshInterval = DEFAULT_REFRESH_INTERVAL, sx, ...props }) {
+  const peer = useContext(PeerContext);
+  const [isLoading, setIsLoading] = useState(false)
+  const [debugInfos, setDebugInfos] = useState([])
+  const [data, setData] = useState({ nodes: [], links: [] })
+
+  const handleNetworkUpdate = useCallback(() => {
+    if (!peer) {
+      return
+    }
+
+    setIsLoading(true)
+    setData({ nodes: [], links: [] })
+    peer.requestPeerInfo();
+    
+    const updateSelfDebugInfo = async () => {
+      const selfDebugInfo = await peer.getInfo();
+      selfDebugInfo.selfInfo.isSelf = true;
+      setDebugInfos(prevDebugInfos => prevDebugInfos.concat(selfDebugInfo));
+    }
+
+    updateSelfDebugInfo();
+  }, [peer]);
+
+  useEffect(() => {
+    if (!peer) {
+      return
+    }
+
+    const unsubscribeDebugInfo = peer.subscribeDebugInfo((peerId, msg) => {
+      if (msg.type === 'Response' && msg.dst === peer.peerId?.toString()) {
+        setDebugInfos(prevPeerInfos => prevPeerInfos.concat(msg.peerInfo))
+      }
+    })
+
+    return unsubscribeDebugInfo
+  }, [peer]);
+
+  const handleDebugInfos = useCallback((newDebugInfos) => {
+    setData(prevData => {
+      let nodesMap = prevData.nodes.reduce((acc, node) => {
+        acc.set(node.id, node);
+        return acc;
+      }, new Map());
+
+      let linksMap = prevData.links.reduce((acc, link) => {
+        acc.set(link.id, link);
+        return acc;
+      }, new Map());
+
+      newDebugInfos.forEach(debugInfo => {
+        ({nodesMap, linksMap} = updateGraphDataWithDebugInfo(peer, debugInfo, nodesMap, linksMap))
+      });
+
+      return {
+        nodes: Array.from(nodesMap.values()),
+        links: Array.from(linksMap.values())
+      }
+    });
+
+    setIsLoading(false);
+    setDebugInfos([]);
+  }, [peer])
+  const throttledHandleDebugInfos = useThrottledCallback(handleDebugInfos, THROTTLE_WAIT_TIME, { leading: false });
+
+  useEffect(() => {
+    if (debugInfos.length) {
+      throttledHandleDebugInfos(debugInfos);
+    }
+  }, [debugInfos, throttledHandleDebugInfos])
+
+  useEffect(() => {
+    if (peer) {
+      // Update network graph on mount
+      handleNetworkUpdate();
+    }
+  }, [peer, handleNetworkUpdate]);
+
+  return (
+    <ScopedCssBaseline>
+      <Box
+        mt={1}
+        sx={{ ...STYLES.container, ...sx }}
+        {...props}
+      >
+        <LoadingButton
+          loading={isLoading}
+          variant="contained"
+          onClick={handleNetworkUpdate}
+          size="small"
+          sx={STYLES.udpateButton}
+        >
+          Update
+        </LoadingButton>
+        <GraphWithTooltip
+          data={data}
+          peer={peer}
+          nodeCharge={-1000}
+        />
+      </Box>
+    </ScopedCssBaseline>
+  )
+}

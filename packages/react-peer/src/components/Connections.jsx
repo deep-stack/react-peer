@@ -47,16 +47,16 @@ export function Connections ({ refreshInterval = DEFAULT_REFRESH_INTERVAL, ...pr
     }
   }, [throttledForceUpdate])
 
-  return peer && peer.node && (
+  return (
     <Box {...props}>
       <Typography variant="subtitle2" color="inherit" noWrap>
         <b>
           Remote Peer Connections
           &nbsp;
-          <Chip size="small" label={peer.node.getConnections().length} variant="outlined" />
+          <Chip size="small" label={peer?.node.getConnections().length ?? 0} variant="outlined" />
         </b>
       </Typography>
-      {peer.node.getConnections().map(connection => (
+      {peer && peer.getPeerConnectionsInfo().map(connection => (
         <TableContainer sx={STYLES.connectionsTable} key={connection.id} component={Paper}>
           <Table size="small">
             <TableBody>
@@ -64,27 +64,27 @@ export function Connections ({ refreshInterval = DEFAULT_REFRESH_INTERVAL, ...pr
                 <TableCell size="small" sx={STYLES.connectionsTableFirstColumn}><b>Connection ID</b></TableCell>
                 <TableCell size="small">{connection.id}</TableCell>
                 <TableCell size="small" align="right"><b>Direction</b></TableCell>
-                <TableCell size="small">{connection.stat.direction}</TableCell>
+                <TableCell size="small">{connection.direction}</TableCell>
                 <TableCell size="small" align="right"><b>Status</b></TableCell>
-                <TableCell size="small">{connection.stat.status}</TableCell>
+                <TableCell size="small">{connection.status}</TableCell>
                 <TableCell size="small" align="right"><b>Type</b></TableCell>
-                <TableCell size="small">{connection.remoteAddr.toString().includes('p2p-circuit/p2p') ? "relayed" : "direct"}</TableCell>
+                <TableCell size="small">{connection.type}</TableCell>
               </TableRow>
               <TableRow>
                 <TableCell size="small" sx={STYLES.connectionsTableFirstColumn}><b>Peer ID</b></TableCell>
-                <TableCell size="small">{`${connection.remotePeer.toString()} ( ${getPseudonymForPeerId(connection.remotePeer.toString())} )`}</TableCell>
+                <TableCell size="small">{`${connection.peerId} ( ${getPseudonymForPeerId(connection.peerId)} )`}</TableCell>
                 <TableCell align="right"><b>Node type</b></TableCell>
                 <TableCell>
                   {
-                    peer.isRelayPeerMultiaddr(connection.remoteAddr.toString())
-                      ? peer.isPrimaryRelay(connection.remoteAddr.toString()) ? "Relay (Primary)" : "Relay (Secondary)"
+                    connection.isPeerRelay
+                      ? connection.isPeerRelayPrimary ? "Relay (Primary)" : "Relay (Secondary)"
                       : "Peer"
                   }
                 </TableCell>
                 <TableCell size="small" align="right"><b>Latency (ms)</b></TableCell>
                 <TableCell size="small" colSpan={3}>
                   {
-                    peer.getLatencyData(connection.remotePeer)
+                    connection.latency
                       .map((value, index) => {
                         return index === 0 ?
                           (<span key={index}><b>{value}</b>&nbsp;</span>) :
@@ -95,7 +95,7 @@ export function Connections ({ refreshInterval = DEFAULT_REFRESH_INTERVAL, ...pr
               </TableRow>
               <TableRow>
                 <TableCell size="small" sx={STYLES.connectionsTableFirstColumn}><b>Connected multiaddr</b></TableCell>
-                <TableCell size="small" colSpan={7}>{connection.remoteAddr.toString()}</TableCell>
+                <TableCell size="small" colSpan={7}>{connection.multiaddr}</TableCell>
               </TableRow>
             </TableBody>
           </Table>

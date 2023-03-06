@@ -19,6 +19,7 @@
   },
   "dependencies": {
     "@cerc-io/peer": "^0.2.29",
+    "@mui/lab": "^5.0.0-alpha.121",
     "@mui/material": "^5.11.3",
     "convert": "^4.10.0",
     "d3": "^5.5.0",
