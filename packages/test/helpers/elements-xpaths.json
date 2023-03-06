@@ -3,8 +3,7 @@
 	"mobyDebugPanelClose": "//button[@data-ref='debug.close']",
 
 	"mobyDebugMessagePanelButton": "//button[@data-ref='debug.messages']",
-	"mobyDebugMessageBlock": "//div[@class='MuiBox-root css-12814v0']",
-	"mobyDebugMessages": "//div[@class='MuiBox-root css-12814v0']//div",
+	"mobyDebugMessages": "//div[@data-ref='debug.subscribed.message']//p",
 
 	"mobyPhisherInputBox": "//input[@data-ref='phishers.input']",
 	"mobyPhisherAddToBatchButton": "//button[@data-ref='phishers.addBatch']",
@@ -15,5 +14,6 @@
 	"mobyMemberCreateInvite": "//button[@data-ref='member.invite.create']",
 	"mobyMemberRevokeInvite": "//button[@data-ref='member.invite.revoke']",
 	"mobyMemberSubmitBatchButton": "//button[@data-ref='members.submitBatch']",
-	"mobyMemberInviteLink":"//button[@data-ref='member.invite.link']"
+	"mobyMemberInviteLink": "//input[@data-ref='member.invite.link']",
+	"mobyMemberDropDown": "/html/body/div/div/div[1]/div/div[3]/details/summary"
 }

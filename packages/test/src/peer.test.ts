@@ -130,16 +130,19 @@ describe('peer-test', () => {
       await sleep(FLOOD_CHECK_DELAY);
 
       await Promise.all(reportReceivers.map(async (reportReceiver) => {
-        // Access message block
-        const messageBlock = await reportReceiver.findElement(webdriver.By.xpath(xpaths.mobyDebugMessageBlock));
-
-        // Wait for it to be populated within a timeout
+        // Wait for message block to be populated within a timeout
         await reportReceiver.wait(async () => {
-          const msgs = await messageBlock.getText();
-          return msgs !== '';
+          const msgs = await reportReceiver.findElements(webdriver.By.xpath(xpaths.mobyDebugMessages));
+          return msgs.length !== 0;
         }, FLOOD_CHECK_DELAY);
 
-        const messages = await messageBlock.getText();
+        // Access message block
+        const debugMessages = await reportReceiver.findElements(webdriver.By.xpath(xpaths.mobyDebugMessages));
+
+        // Read all the messages received
+        const messages = await Promise.all(
+          debugMessages.map(msg => msg.getText())
+        );
 
         // Check if message includes the phisher reports
         for (const expectedPhisherReport of expectedPhisherReports) {
@@ -178,12 +181,19 @@ describe('peer-test', () => {
       await sleep(FLOOD_CHECK_DELAY);
 
       await Promise.all(reportReceivers.map(async (reportReceiver) => {
-        // Access message block
-        // TODO: Use an array list of arrived messages instead of message block
-        const messageBlock = await reportReceiver.findElement(webdriver.By.xpath(xpaths.mobyDebugMessageBlock));
+        // Wait for message block to be populated within a timeout
+        await reportReceiver.wait(async () => {
+          const msgs = await reportReceiver.findElements(webdriver.By.xpath(xpaths.mobyDebugMessages));
+          return msgs.length !== 0;
+        }, FLOOD_CHECK_DELAY);
 
-        // Read all the messsages received
-        const messages = await messageBlock.getText();
+        // Access message block
+        const debugMessages = await reportReceiver.findElements(webdriver.By.xpath(xpaths.mobyDebugMessages));
+
+        // Read all the messages received
+        const messages = await Promise.all(
+          debugMessages.map(msg => msg.getText())
+        );
 
         // Check if message includes the member endorsements
         for (const expectedMemberEndorsement of expectedMemberEndorsements) {
@@ -192,36 +202,119 @@ describe('peer-test', () => {
       }));
     });
 
-    it('members can create invite links for other peers', async() => {
-      // To be run along with the above tests
+    describe('test invite links', async() => {
+      let invitor: webdriver.WebDriver;
+      let invitee: webdriver.WebDriver;
+      let secondaryInvitee: webdriver.WebDriver;
+      let reportReceivers : webdriver.WebDriver[];
 
-      // Skip/pass this test if testing with < 2 peers
-      if (peerDrivers.length < 2) {
-        log('Skipping test as number of peers < 2')
-        return;
-      }
+      // Select first peer as the phishing reporter, rest as report receivers
+      before('setup drivers', async function () {
+        if (peerDrivers.length < 2) {
+          log('Skipping this section as number of peers < 2');
+          this.skip();
+        }
 
-      // Select first peer as the invitor and the second one as the invitee
-      const invitor = peerDrivers[0];
-      const invitee = peerDrivers[1];
+        invitor = peerDrivers[0];
+        invitee = peerDrivers[1];
+        reportReceivers = peerDrivers.slice(2).concat(invitor);
+      });
 
-      const createInviteButton = await invitor.findElement(webdriver.By.xpath(xpaths.mobyMemberCreateInvite));
-      await createInviteButton.click();
+      it('members can create invite links for other peers', async () => {
+        // Create a new invite link for Member1
+        const createInviteButton = await invitor.findElement(webdriver.By.xpath(xpaths.mobyMemberCreateInvite));
+        await createInviteButton.click();
 
-      // Create invite link for isMember1
-      await invitor.wait(until.alertIsPresent(), 3 * ONE_SECOND);
-      await invitor.switchTo().alert().sendKeys("Member1");
-      await invitor.switchTo().alert().accept();
+        await invitor.wait(until.alertIsPresent(), 3 * ONE_SECOND);
+        await invitor.switchTo().alert().sendKeys("Member1");
+        await invitor.switchTo().alert().accept();
 
-      await invitor.wait(until.alertIsPresent(), 3 * ONE_SECOND);
-      await invitor.switchTo().alert().accept();
+        // Wait for confirmation alert
+        await invitor.wait(until.alertIsPresent(), 3 * ONE_SECOND);
+        await invitor.switchTo().alert().accept();
 
-      const outstandingLinkElements = await invitor.findElements(webdriver.By.xpath(xpaths.mobyMemberInviteLink));
-      const latestInviteLink = await outstandingLinkElements.slice(-1)[0].getText();
+        // Click on the dropdown to make links visible
+        const dropDown = invitor.findElement(webdriver.By.xpath(xpaths.mobyMemberDropDown));
+        await dropDown.click();
 
-      // Let invitee peer navigate to the created invite link
-      await navigateURL(invitee, latestInviteLink);
-      expect(await invitee.wait(until.elementsLocated(webdriver.By.xpath(xpaths.mobyMemberCreateInvite)), 10 * ONE_SECOND)).to.not.throw();
+        // Get the recently created invite link
+        const outstandingLinkElements = await invitor.findElements(webdriver.By.xpath(xpaths.mobyMemberInviteLink));
+        const latestLink = await outstandingLinkElements.slice(-1)[0].getAttribute('value');
+
+        // Close invitee's debug panel
+        const debugCloseButton = await invitee.findElement(webdriver.By.xpath(xpaths.mobyDebugPanelClose));
+        debugCloseButton.click();
+
+        // Let invitee peer navigate to the created invite link
+        await navigateURL(invitee, latestLink);
+        expect(invitee.wait(until.elementsLocated(webdriver.By.xpath(xpaths.mobyMemberCreateInvite)), 10 * ONE_SECOND)).to.not.throw;
+      });
+
+      it('invitee can make member endorsements', async () => {
+        // Let peer call claimIfMember
+        const members = ['member1', 'member2'];
+        const expectedMemberEndorsements = members.map(member => `method: claimIfMember, value: TWT:${member}`);
+
+        // Load members elements
+        const claimMemberInput = await invitee.findElement(webdriver.By.xpath(xpaths.mobyMemberInputBox));
+        const claimMemberButton = await invitee.findElement(webdriver.By.xpath(xpaths.mobyMemberAddToBatchButton));
+
+        // Populate member input boxes
+        for (const member of members) {
+          await claimMemberInput.clear();
+          await claimMemberInput.sendKeys(member);
+          await claimMemberButton.click();
+        }
+
+        // Submit batch of members to p2p network
+        const submitMemberBatchButton = await invitee.findElement(webdriver.By.xpath(xpaths.mobyMemberSubmitBatchButton));
+        await submitMemberBatchButton.click();
+
+        // Wait before checking for flood messages
+        await sleep(FLOOD_CHECK_DELAY);
+
+        // Check if other peers receive the messages
+        await Promise.all(reportReceivers.map(async (reportReceiver) => {
+          // Access message block
+          const debugMessages = await reportReceiver.findElements(webdriver.By.xpath(xpaths.mobyDebugMessages));
+
+          // Read all the messages received
+          const messages = await Promise.all(
+            debugMessages.map(msg => msg.getText())
+          );
+
+          // Check if message includes the member endorsements
+          for (const expectedMemberEndorsement of expectedMemberEndorsements) {
+            expect(messages).to.include(expectedMemberEndorsement);
+          }
+        }));
+      });
+
+      it('check if invitee can create an invite link', async () => {
+        secondaryInvitee = peerDrivers[2];
+
+        // Create a secondary invite link for Member2
+        const createInviteButton = await invitor.findElement(webdriver.By.xpath(xpaths.mobyMemberCreateInvite));
+        await createInviteButton.click();
+
+        await invitor.wait(until.alertIsPresent(), 3 * ONE_SECOND);
+        await invitor.switchTo().alert().sendKeys("Member2");
+        await invitor.switchTo().alert().accept();
+
+        await invitor.wait(until.alertIsPresent(), 3 * ONE_SECOND);
+        await invitor.switchTo().alert().accept();
+
+        // Click on the dropdown to make links visible
+        const dropDown = invitor.findElement(webdriver.By.xpath(xpaths.mobyMemberDropDown));
+        await dropDown.click();
+
+        // Get the recently created invite link
+        const outstandingLinkElements = await invitor.findElements(webdriver.By.xpath(xpaths.mobyMemberInviteLink));
+        const latestLink = await outstandingLinkElements.slice(-1)[0].getAttribute('value');
+
+        await navigateURL(secondaryInvitee, latestLink);
+        expect(secondaryInvitee.wait(until.elementsLocated(webdriver.By.xpath(xpaths.mobyMemberCreateInvite)), 10 * ONE_SECOND)).to.not.throw;
+      });
     });
   });
 
