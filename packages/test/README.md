@@ -23,9 +23,11 @@
 * Run Browserstack tests:
 
   ```bash
+  # with test-app
   yarn test
+
+  # with mobymask-app
+  yarn test:mobymask
   ```
 
 * Check the [Browserstack dashboard](https://automate.browserstack.com/dashboard/v2) for status of your test
-
-* The current test launches multiple browser instances on Browserstack. These instances attempt to connect to the [peer-test-app](https://peer-test-app.dev.vdb.to/). When a peer is connected to a relay, it waits for connections with other peers. The test starts once enough connections are established.

@@ -3,8 +3,8 @@
 	"mobyDebugPanelClose": "//button[@data-ref='debug.close']",
 
 	"mobyDebugMessagePanelButton": "//button[@data-ref='debug.messages']",
-	"mobyDebugMessageBlock": "//div[@class='MuiBox-root css-1ed6yqy']",
-	"mobyDebugMessages": "//div[@class='MuiBox-root css-1ed6yqy']//div",
+	"mobyDebugMessageBlock": "//div[@class='MuiBox-root css-12814v0']",
+	"mobyDebugMessages": "//div[@class='MuiBox-root css-12814v0']//div",
 
 	"mobyPhisherInputBox": "//input[@data-ref='phishers.input']",
 	"mobyPhisherAddToBatchButton": "//button[@data-ref='phishers.addBatch']",

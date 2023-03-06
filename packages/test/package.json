@@ -6,7 +6,8 @@
     "lint": "eslint .",
     "build": "yarn clean && tsc",
     "clean": "rm -rf ./dist",
-    "test": "DEBUG=laconic:* mocha src/peer.test.ts"
+    "test": "DEBUG=laconic:* mocha src/peer.test.ts",
+    "test:mobymask": "DEBUG=laconic:* mocha src/peer.test.ts --mobymask"
   },
   "dependencies": {
     "@cerc-io/peer": "^0.2.29",
@@ -14,7 +15,8 @@
     "dotenv": "^16.0.3",
     "selenium-webdriver": "^4.8.1",
     "chai": "^4.3.4",
-    "mocha": "^8.4.0"
+    "mocha": "^8.4.0",
+    "yargs": "^17.0.1"
   },
   "devDependencies": {
     "@types/debug": "^4.1.7",
