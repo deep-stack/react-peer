@@ -18,7 +18,8 @@ import {
   SCRIPT_GET_PEER_ID,
   markSessionAsFailed,
   TEST_APP_MEMBER_URL,
-  navigateURL
+  navigateURL,
+  markSessionAsPassed
 } from './utils';
 import { FLOOD_CHECK_DELAY, ONE_SECOND } from './constants';
 import xpaths from '../helpers/elements-xpaths.json';
@@ -38,7 +39,7 @@ let peerIds: string[] = [];
 
 describe('peer-test', () => {
   afterEach(async function () {
-    if (this.currentTest?.state === 'failed') {
+    if (this.currentTest?.state !== 'passed') {
       // Mark the Browserstack sessions as failed
       await markSessionAsFailed(peerDrivers);
 
@@ -47,10 +48,13 @@ describe('peer-test', () => {
     }
   });
 
-  after(async function () {
-    if (this.currentTest?.state === 'failed') {
+  after('after outside', async function () {
+    if (this.currentTest?.state !== 'passed') {
       // Mark the Browserstack sessions as failed
       await markSessionAsFailed(peerDrivers);
+    } else {
+      // Mark the Browserstack sessions as passed
+      await markSessionAsPassed(peerDrivers);
     }
 
     // Quit browser instances
@@ -188,13 +192,13 @@ describe('peer-test', () => {
       }));
     });
 
-    it('members can create invite links for other peers', async(done) => {
+    it('members can create invite links for other peers', async() => {
       // To be run along with the above tests
 
       // Skip/pass this test if testing with < 2 peers
       if (peerDrivers.length < 2) {
         log('Skipping test as number of peers < 2')
-        done();
+        return;
       }
 
       // Select first peer as the invitor and the second one as the invitee
@@ -205,9 +209,11 @@ describe('peer-test', () => {
       await createInviteButton.click();
 
       // Create invite link for isMember1
+      await invitor.wait(until.alertIsPresent(), 3 * ONE_SECOND);
       await invitor.switchTo().alert().sendKeys("Member1");
       await invitor.switchTo().alert().accept();
 
+      await invitor.wait(until.alertIsPresent(), 3 * ONE_SECOND);
       await invitor.switchTo().alert().accept();
 
       const outstandingLinkElements = await invitor.findElements(webdriver.By.xpath(xpaths.mobyMemberInviteLink));
@@ -220,11 +226,11 @@ describe('peer-test', () => {
   });
 
   (args.mobymask ? describe.skip : describe)('test-app-tests', () => {
-    it('peers send and receive flood messages', async (done) => {
+    it('peers send and receive flood messages', async () => {
       // Skip/pass this test if testing with < 2 peers
       if (peerDrivers.length < 2) {
         log('Skipping test as number of peers < 2')
-        done();
+        return;
       }
 
       const expectedFloodMessages: Map<string, string> = new Map();
