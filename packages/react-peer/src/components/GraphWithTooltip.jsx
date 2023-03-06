@@ -1,6 +1,7 @@
 import React, { useCallback, useMemo, useState } from 'react';
+
 import { Box, Popover, Table, TableBody, TableCell, TableContainer, TableRow, Typography } from '@mui/material';
-import { getPseudonymForPeerId } from '@cerc-io/peer';
+
 import ForceDirectedGraph from './ForceDirectedGraph';
 
 const STYLES = {
@@ -14,16 +15,10 @@ const CONTAINER_HEIGHT = (window.innerHeight / 2) - 40
 
 function GraphWithTooltip ({ data, nodeCharge }) {
   const [anchorEl, setAnchorEl] = useState(null)
-  const [hoveredPeer, setHoveredPeer] = useState(null)
+  const [hoveredNode, setHoveredNode] = useState(null)
 
   const onMouseOverNode = useCallback(function (data) {
-    const { id: nodeId, multiaddrs } = data;
-
-    setHoveredPeer({
-      id: nodeId,
-      multiaddrs
-    });
-
+    setHoveredNode(data);
     setAnchorEl(this);
   }, []);
 
@@ -57,12 +52,12 @@ function GraphWithTooltip ({ data, nodeCharge }) {
             <TableBody>
               <TableRow>
                 <TableCell size="small"><b>Peer ID</b></TableCell>
-                <TableCell size="small">{hoveredPeer && `${hoveredPeer.id} ( ${getPseudonymForPeerId(hoveredPeer.id)} )`}</TableCell>
+                <TableCell size="small">{hoveredNode && `${hoveredNode.id} (${hoveredNode.pseudonym})`}</TableCell>
               </TableRow>
               <TableRow>
                 <TableCell size="small"><b>Multiaddr</b></TableCell>
                 <TableCell size="small">
-                  {hoveredPeer && hoveredPeer.multiaddrs.map(multiaddr => (<Typography key={multiaddr} variant="body2">{multiaddr}</Typography>))}
+                  {hoveredNode && hoveredNode.multiaddrs.map(multiaddr => (<Typography key={multiaddr} variant="body2">{multiaddr}</Typography>))}
                 </TableCell>
               </TableRow>
             </TableBody>

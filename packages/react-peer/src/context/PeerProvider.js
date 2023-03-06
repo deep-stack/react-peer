@@ -1,6 +1,6 @@
 import React from 'react';
 
-import { Peer, createPeerId } from '@cerc-io/peer';
+import { Peer, createPeerId, getPseudonymForPeerId } from '@cerc-io/peer';
 
 import { PeerContext } from './PeerContext';
 
@@ -44,7 +44,7 @@ export const PeerProvider = ({ peerConfig = {}, relayNodes, children }) => {
       await peer.init(initConfig, peerIdObj);
 
       // Debug
-      console.log(`Peer ID: ${peer.peerId.toString()}`);
+      console.log(`Peer ID: ${peer.peerId.toString()} (${getPseudonymForPeerId(peer.peerId.toString())})`);
 
       localStorage.setItem('peerId', JSON.stringify(peerIdObj));
       setPeer(peer);

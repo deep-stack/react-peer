@@ -8,7 +8,7 @@ import {
   PeersGraph
 } from '@cerc-io/react-peer'
 
-import { Peer } from '@cerc-io/peer';
+import { getPseudonymForPeerId, Peer } from '@cerc-io/peer';
 import { createTheme, ThemeProvider } from '@mui/material/styles';
 import { AppBar, Box, Card, CardContent, CssBaseline, Toolbar, Typography } from '@mui/material';
 
@@ -59,7 +59,7 @@ function App() {
 
     // Subscribe to messages from remote peers
     const unsubscribeMessage = peer.subscribeMessage((peerId, message) => {
-      console.log(`${peerId.toString()} > ${message}`)
+      console.log(`${peerId.toString()} (${getPseudonymForPeerId(peerId.toString())}) > ${message}`)
     })
 
     // Expose broadcast method in browser to send messages
@@ -68,7 +68,7 @@ function App() {
     }
 
     const unsubscribeTopic = peer.subscribeTopic(TEST_TOPIC, (peerId, data) => {
-      console.log(`${peerId.toString()} > ${data}`)
+      console.log(`${peerId.toString()} (${getPseudonymForPeerId(peerId.toString())}) > ${data}`)
     })
 
     window.floodMessage = async (message: string) => {

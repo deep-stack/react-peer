@@ -42,6 +42,7 @@ export function SelfInfo ({ relayNodes, refreshInterval = DEFAULT_REFRESH_INTERV
     }
 
     peer.node.peerStore.addEventListener('change:multiaddrs', throttledUpdateInfo)
+    throttledUpdateInfo();
 
     return () => {
       peer.node?.peerStore.removeEventListener('change:multiaddrs', throttledUpdateInfo)
