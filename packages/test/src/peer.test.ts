@@ -193,6 +193,7 @@ describe('peer-test', () => {
 
       // Skip/pass this test if testing with < 2 peers
       if (peerDrivers.length < 2) {
+        log('Skipping test as number of peers < 2')
         done();
       }
 
@@ -222,6 +223,7 @@ describe('peer-test', () => {
     it('peers send and receive flood messages', async (done) => {
       // Skip/pass this test if testing with < 2 peers
       if (peerDrivers.length < 2) {
+        log('Skipping test as number of peers < 2')
         done();
       }
 
