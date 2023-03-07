@@ -147,3 +147,7 @@ export const markSessionAsPassed = async (peerDrivers: WebDriver[]): Promise<voi
     );
   }));
 };
+
+export const scrollElementIntoView = async (element : webdriver.WebElement): Promise<void> => {
+  await element.getDriver().executeScript("arguments[0].scrollIntoView(true);", element);
+};

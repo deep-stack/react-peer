@@ -19,7 +19,8 @@ import {
   markSessionAsFailed,
   TEST_APP_MEMBER_URL,
   navigateURL,
-  markSessionAsPassed
+  markSessionAsPassed,
+  scrollElementIntoView
 } from './utils';
 import { FLOOD_CHECK_DELAY, MESSAGE_ARRIVAL_TIMEOUT, ONE_SECOND } from './constants';
 import xpaths from '../helpers/elements-xpaths.json';
@@ -97,13 +98,13 @@ describe('peer-test', () => {
       // Navigate to app url
       await navigateURL(reportSender, TEST_APP_MEMBER_URL);
 
-      await Promise.all(reportReceivers.map(async (reportReceiver): Promise<void> => {
         // Open debug panel
-        const debugButton = await reportReceiver.findElement(webdriver.By.xpath(xpaths.mobyDebugPanelOpen));
+      await Promise.all(peerDrivers.map(async (peerDriver): Promise<void> => {
+        // Open the debug panel button and switch to messages pane
+        const debugButton = await peerDriver.findElement(webdriver.By.xpath(xpaths.mobyDebugPanelOpen));
         await debugButton.click();
 
-        // Switch to messages pane
-        const messagesPaneButton = await reportReceiver.findElement(webdriver.By.xpath(xpaths.mobyDebugMessagePanelButton));
+        const messagesPaneButton = await peerDriver.findElement(webdriver.By.xpath(xpaths.mobyDebugMessagePanelButton));
         await messagesPaneButton.click();
       }));
 
@@ -114,6 +115,7 @@ describe('peer-test', () => {
       // Load phishers elements
       const claimPhisherInput = await reportSender.findElement(webdriver.By.xpath(xpaths.mobyPhisherInputBox));
       const claimPhisherButton = await reportSender.findElement(webdriver.By.xpath(xpaths.mobyPhisherAddToBatchButton));
+      await scrollElementIntoView(claimPhisherButton);
 
       // Populate phisher input boxes
       for (const phisher of phishers) {
@@ -124,30 +126,27 @@ describe('peer-test', () => {
 
       // Submit batch of phishers to p2p network
       const submitPhisherBatchButton = await reportSender.findElement(webdriver.By.xpath(xpaths.mobyPhisherSubmitBatchButton));
+      await scrollElementIntoView(submitPhisherBatchButton);
       await submitPhisherBatchButton.click();
 
-      // Wait before checking for flood messages
-      await sleep(FLOOD_CHECK_DELAY);
-
+      // Check if other peers receive the messages
       await Promise.all(reportReceivers.map(async (reportReceiver) => {
-        // Wait for message block to be populated within a timeout
-        await reportReceiver.wait(async () => {
-          const msgs = await reportReceiver.findElements(webdriver.By.xpath(xpaths.mobyDebugMessages));
-          return msgs.length !== 0;
-        }, FLOOD_CHECK_DELAY);
-
-        // Access message block
-        const debugMessages = await reportReceiver.findElements(webdriver.By.xpath(xpaths.mobyDebugMessages));
-
-        // Read all the messages received
+        // Waiting till the messages have arrived
+        expect(reportReceiver.wait( async function() {
+          // Read message objects
+          const messageElements = await  reportReceiver.findElements(webdriver.By.xpath(xpaths.mobyDebugMessages));
         const messages = await Promise.all(
-          debugMessages.map(msg => msg.getText())
+              messageElements.map(msg => msg.getText())
         );
 
-        // Check if message includes the phisher reports
+          let messagesArrived = true;
         for (const expectedPhisherReport of expectedPhisherReports) {
-          expect(messages).to.include(expectedPhisherReport);
+            if(!messages.includes(expectedPhisherReport)){
+              messagesArrived = false;
         }
+          }
+          return messagesArrived;
+        }, MESSAGE_ARRIVAL_TIMEOUT)).to.not.throw;
       }));
     });
 
@@ -175,10 +174,8 @@ describe('peer-test', () => {
 
       // Submit batch of members to p2p network
       const submitMemberBatchButton = await reportSender.findElement(webdriver.By.xpath(xpaths.mobyMemberSubmitBatchButton));
+      await scrollElementIntoView(submitMemberBatchButton);
       await submitMemberBatchButton.click();
-
-      // Wait before checking for flood messages
-      await sleep(FLOOD_CHECK_DELAY);
 
       // Check if other peers receive the messages
       await Promise.all(reportReceivers.map(async (reportReceiver) => {
@@ -234,15 +231,13 @@ describe('peer-test', () => {
 
         // Click on the dropdown to make links visible
         const dropDown = invitor.findElement(webdriver.By.xpath(xpaths.mobyMemberDropDown));
+        await scrollElementIntoView(dropDown);
         await dropDown.click();
 
         // Get the recently created invite link
         const outstandingLinkElements = await invitor.findElements(webdriver.By.xpath(xpaths.mobyMemberInviteLink));
         const latestLink = await outstandingLinkElements.slice(-1)[0].getAttribute('value');
 
-        // Close invitee's debug panel
-        const debugCloseButton = await invitee.findElement(webdriver.By.xpath(xpaths.mobyDebugPanelClose));
-        debugCloseButton.click();
 
         // Let invitee peer navigate to the created invite link
         await navigateURL(invitee, latestLink);
@@ -250,12 +245,6 @@ describe('peer-test', () => {
       });
 
       it('invited members can make member endorsements', async () => {
-        // Open debug panel and switch to messages pane for inviteCreator
-        const debugOpenButton = await invitor.findElement(webdriver.By.xpath(xpaths.mobyDebugPanelOpen));
-        debugOpenButton.click();
-        const messagesPaneButton = await invitor.findElement(webdriver.By.xpath(xpaths.mobyDebugMessagePanelButton));
-        await messagesPaneButton.click();
-
         // Let peer call claimIfMember
         const members = ['invitee-member1', 'invitee-member2'];
         const expectedMemberEndorsements = members.map(member => `method: claimIfMember, value: TWT:${member}`);
@@ -263,6 +252,7 @@ describe('peer-test', () => {
         // Load members elements
         const claimMemberInput = await invitee.findElement(webdriver.By.xpath(xpaths.mobyMemberInputBox));
         const claimMemberButton = await invitee.findElement(webdriver.By.xpath(xpaths.mobyMemberAddToBatchButton));
+        await scrollElementIntoView(claimMemberButton);
 
         // Populate member input boxes
         for (const member of members) {
@@ -273,10 +263,8 @@ describe('peer-test', () => {
 
         // Submit batch of members to p2p network
         const submitMemberBatchButton = await invitee.findElement(webdriver.By.xpath(xpaths.mobyMemberSubmitBatchButton));
+        await scrollElementIntoView(submitMemberBatchButton);
         await submitMemberBatchButton.click();
-
-        // Wait before checking for flood messages
-        await sleep(FLOOD_CHECK_DELAY);
 
         // Check if other peers receive the messages
         await Promise.all(reportReceivers.map(async (reportReceiver) => {
@@ -310,6 +298,7 @@ describe('peer-test', () => {
 
         // Create a secondary invite link for Member2
         const createInviteButton = await invitee.findElement(webdriver.By.xpath(xpaths.mobyMemberCreateInvite));
+        await scrollElementIntoView(createInviteButton);
         await createInviteButton.click();
 
         await invitee.wait(until.alertIsPresent(), 3 * ONE_SECOND);
@@ -321,27 +310,19 @@ describe('peer-test', () => {
 
         // Click on the dropdown to make links visible
         const dropDown = invitee.findElement(webdriver.By.xpath(xpaths.mobyMemberDropDown));
+        await scrollElementIntoView(dropDown);
         await dropDown.click();
 
         // Get the recently created invite link
         const outstandingLinkElements = await invitee.findElements(webdriver.By.xpath(xpaths.mobyMemberInviteLink));
         const latestLink = await outstandingLinkElements.slice(-1)[0].getAttribute('value');
 
-        // Close secondary's debug panel
-        const debugCloseButton = await secondaryInvitee.findElement(webdriver.By.xpath(xpaths.mobyDebugPanelClose));
-        debugCloseButton.click();
 
         await navigateURL(secondaryInvitee, latestLink);
         expect(secondaryInvitee.wait(until.elementsLocated(webdriver.By.xpath(xpaths.mobyMemberCreateInvite)), 10 * ONE_SECOND)).to.not.throw;
       });
 
       it('secondary invitees can make member endorsements', async () => {
-         // Open debug panel and switch to messages pane for inviteCreator
-         const debugOpenButton = await invitee.findElement(webdriver.By.xpath(xpaths.mobyDebugPanelOpen));
-         debugOpenButton.click();
-         const messagesPaneButton = await invitee.findElement(webdriver.By.xpath(xpaths.mobyDebugMessagePanelButton));
-         await messagesPaneButton.click();
-
         // Let peer call claimIfMember
         const members = ['sec-invitee-member1', 'sec-invitee-member2'];
         const expectedMemberEndorsements = members.map(member => `method: claimIfMember, value: TWT:${member}`);
@@ -349,6 +330,7 @@ describe('peer-test', () => {
         // Load members elements
         const claimMemberInput = await secondaryInvitee.findElement(webdriver.By.xpath(xpaths.mobyMemberInputBox));
         const claimMemberButton = await secondaryInvitee.findElement(webdriver.By.xpath(xpaths.mobyMemberAddToBatchButton));
+        await scrollElementIntoView(claimMemberButton);
 
         // Populate member input boxes
         for (const member of members) {
@@ -359,10 +341,8 @@ describe('peer-test', () => {
 
         // Submit batch of members to p2p network
         const submitMemberBatchButton = await secondaryInvitee.findElement(webdriver.By.xpath(xpaths.mobyMemberSubmitBatchButton));
+        await scrollElementIntoView(submitMemberBatchButton);
         await submitMemberBatchButton.click();
-
-        // Wait before checking for flood messages
-        await sleep(5 * ONE_SECOND);
 
         // Reassign report receivers
         reportReceivers = peerDrivers.slice(0,2).concat(peerDrivers.slice(3));
