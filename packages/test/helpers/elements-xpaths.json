@@ -3,7 +3,7 @@
 	"mobyDebugPanelClose": "//button[@data-ref='debug.close']",
 
 	"mobyDebugMessagePanelButton": "//button[@data-ref='debug.messages']",
-	"mobyDebugMessages": "//div[@data-ref='debug.subscribed.message']//p",
+	"mobyDebugMessages": "//div[@data-ref='debug.subscribed.message']",
 
 	"mobyPhisherInputBox": "//input[@data-ref='phishers.input']",
 	"mobyPhisherAddToBatchButton": "//button[@data-ref='phishers.addBatch']",

@@ -158,7 +158,7 @@ describe('peer-test', () => {
 
           let messagesArrived = true;
           for (const expectedPhisherReport of expectedPhisherReports) {
-            if(!messages.includes(expectedPhisherReport)){
+            if(!messages.find(msg => msg.includes(expectedPhisherReport))){
               messagesArrived = false;
             }
           }
@@ -206,7 +206,7 @@ describe('peer-test', () => {
 
           let messagesArrived = true;
           for (const expectedMemberEndorsement of expectedMemberEndorsements) {
-            if(!messages.includes(expectedMemberEndorsement)){
+            if(!messages.find(msg => msg.includes(expectedMemberEndorsement))){
               messagesArrived = false;
             }
           }
@@ -295,7 +295,7 @@ describe('peer-test', () => {
 
             let messagesArrived = true;
             for (const expectedMemberEndorsement of expectedMemberEndorsements) {
-              if(!messages.includes(expectedMemberEndorsement)){
+              if(!messages.find(msg => msg.includes(expectedMemberEndorsement))){
                 messagesArrived = false;
               }
             }
@@ -376,11 +376,40 @@ describe('peer-test', () => {
 
             let messagesArrived = true;
             for (const expectedMemberEndorsement of expectedMemberEndorsements) {
-              if(!messages.includes(expectedMemberEndorsement)){
+              if(!messages.find(msg => msg.includes(expectedMemberEndorsement))){
                 messagesArrived = false;
               }
             }
             return messagesArrived;
+          }, MESSAGE_ARRIVAL_TIMEOUT)).to.not.throw;
+        }));
+      });
+
+      it('invited members can revoke links created by them', async () => {
+        // To be run with above tests
+        const revokeInviteButton = invitee.findElement(webdriver.By.xpath(xpaths.mobyMemberRevokeInvite))
+        await scrollElementIntoView(revokeInviteButton);
+        revokeInviteButton.click();
+
+        const inviteePeerId: string = await invitee.executeScript(SCRIPT_GET_PEER_ID);
+
+        const { getPseudonymForPeerId } = await import('@cerc-io/peer');
+        const inviteePseudonym: string = getPseudonymForPeerId(inviteePeerId);
+
+        const expectedMessageHeader = `Received a message on mobymask P2P network from peer: ${inviteePeerId} (${inviteePseudonym}) \n Signed delegation:`;
+        const expectedRevocationMessage = 'Signed intention to revoke:';
+
+        reportReceivers = peerDrivers.slice(2).concat(peerDrivers[0]);
+
+        // Check if other peers receive the messages
+        await Promise.all(reportReceivers.map(async (reportReceiver) => {
+          // Waiting till the messages have arrived
+          expect( reportReceiver.wait(async function() {
+            // Get the last message text
+            const messageElements = await  reportReceiver.findElements(webdriver.By.xpath(xpaths.mobyDebugMessages));
+            const message = await messageElements[messageElements.length-1].getText();
+
+            return (message.includes(expectedMessageHeader) && message.includes(expectedRevocationMessage));
           }, MESSAGE_ARRIVAL_TIMEOUT)).to.not.throw;
         }));
       });
