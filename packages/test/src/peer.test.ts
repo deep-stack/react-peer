@@ -21,7 +21,7 @@ import {
   navigateURL,
   markSessionAsPassed
 } from './utils';
-import { FLOOD_CHECK_DELAY, ONE_SECOND } from './constants';
+import { FLOOD_CHECK_DELAY, MESSAGE_ARRIVAL_TIMEOUT, ONE_SECOND } from './constants';
 import xpaths from '../helpers/elements-xpaths.json';
 
 dotenv.config({ path: path.resolve(__dirname, '../.env') });
@@ -180,25 +180,24 @@ describe('peer-test', () => {
       // Wait before checking for flood messages
       await sleep(FLOOD_CHECK_DELAY);
 
+      // Check if other peers receive the messages
       await Promise.all(reportReceivers.map(async (reportReceiver) => {
-        // Wait for message block to be populated within a timeout
-        await reportReceiver.wait(async () => {
-          const msgs = await reportReceiver.findElements(webdriver.By.xpath(xpaths.mobyDebugMessages));
-          return msgs.length !== 0;
-        }, FLOOD_CHECK_DELAY);
-
-        // Access message block
-        const debugMessages = await reportReceiver.findElements(webdriver.By.xpath(xpaths.mobyDebugMessages));
-
-        // Read all the messages received
+        // Waiting till the messages have arrived
+        expect(reportReceiver.wait( async function() {
+          // Read message objects
+          const messageElements = await  reportReceiver.findElements(webdriver.By.xpath(xpaths.mobyDebugMessages));
         const messages = await Promise.all(
-          debugMessages.map(msg => msg.getText())
+              messageElements.map(msg => msg.getText())
         );
 
-        // Check if message includes the member endorsements
+          let messagesArrived = true;
         for (const expectedMemberEndorsement of expectedMemberEndorsements) {
-          expect(messages).to.include(expectedMemberEndorsement);
+            if(!messages.includes(expectedMemberEndorsement)){
+              messagesArrived = false;
         }
+          }
+          return messagesArrived;
+        }, MESSAGE_ARRIVAL_TIMEOUT)).to.not.throw;
       }));
     });
 
@@ -250,9 +249,15 @@ describe('peer-test', () => {
         expect(invitee.wait(until.elementsLocated(webdriver.By.xpath(xpaths.mobyMemberCreateInvite)), 10 * ONE_SECOND)).to.not.throw;
       });
 
-      it('invitee can make member endorsements', async () => {
+      it('invited members can make member endorsements', async () => {
+        // Open debug panel and switch to messages pane for inviteCreator
+        const debugOpenButton = await invitor.findElement(webdriver.By.xpath(xpaths.mobyDebugPanelOpen));
+        debugOpenButton.click();
+        const messagesPaneButton = await invitor.findElement(webdriver.By.xpath(xpaths.mobyDebugMessagePanelButton));
+        await messagesPaneButton.click();
+
         // Let peer call claimIfMember
-        const members = ['member1', 'member2'];
+        const members = ['invitee-member1', 'invitee-member2'];
         const expectedMemberEndorsements = members.map(member => `method: claimIfMember, value: TWT:${member}`);
 
         // Load members elements
@@ -275,45 +280,112 @@ describe('peer-test', () => {
 
         // Check if other peers receive the messages
         await Promise.all(reportReceivers.map(async (reportReceiver) => {
-          // Access message block
-          const debugMessages = await reportReceiver.findElements(webdriver.By.xpath(xpaths.mobyDebugMessages));
-
-          // Read all the messages received
+          // Waiting till the messages have arrived
+          expect( reportReceiver.wait(async function() {
+            // Reading message objects
+            const messageElements = await  reportReceiver.findElements(webdriver.By.xpath(xpaths.mobyDebugMessages));
           const messages = await Promise.all(
-            debugMessages.map(msg => msg.getText())
+                messageElements.map(msg => msg.getText())
           );
 
-          // Check if message includes the member endorsements
+            let messagesArrived = true;
           for (const expectedMemberEndorsement of expectedMemberEndorsements) {
-            expect(messages).to.include(expectedMemberEndorsement);
+              if(!messages.includes(expectedMemberEndorsement)){
+                messagesArrived = false;
           }
+            }
+            return messagesArrived;
+          }, MESSAGE_ARRIVAL_TIMEOUT)).to.not.throw;
         }));
       });
 
-      it('check if invitee can create an invite link', async () => {
+      it('invited members can create invite links for other peers', async () => {
+        // Skip this test if number of peers < 3
+        if (peerDrivers.length < 3) {
+          log('Skipping this test as number of peers < 3');
+          return;
+        }
+
         secondaryInvitee = peerDrivers[2];
 
         // Create a secondary invite link for Member2
-        const createInviteButton = await invitor.findElement(webdriver.By.xpath(xpaths.mobyMemberCreateInvite));
+        const createInviteButton = await invitee.findElement(webdriver.By.xpath(xpaths.mobyMemberCreateInvite));
         await createInviteButton.click();
 
-        await invitor.wait(until.alertIsPresent(), 3 * ONE_SECOND);
-        await invitor.switchTo().alert().sendKeys("Member2");
-        await invitor.switchTo().alert().accept();
+        await invitee.wait(until.alertIsPresent(), 3 * ONE_SECOND);
+        await invitee.switchTo().alert().sendKeys("Member2");
+        await invitee.switchTo().alert().accept();
 
-        await invitor.wait(until.alertIsPresent(), 3 * ONE_SECOND);
-        await invitor.switchTo().alert().accept();
+        await invitee.wait(until.alertIsPresent(), 3 * ONE_SECOND);
+        await invitee.switchTo().alert().accept();
 
         // Click on the dropdown to make links visible
-        const dropDown = invitor.findElement(webdriver.By.xpath(xpaths.mobyMemberDropDown));
+        const dropDown = invitee.findElement(webdriver.By.xpath(xpaths.mobyMemberDropDown));
         await dropDown.click();
 
         // Get the recently created invite link
-        const outstandingLinkElements = await invitor.findElements(webdriver.By.xpath(xpaths.mobyMemberInviteLink));
+        const outstandingLinkElements = await invitee.findElements(webdriver.By.xpath(xpaths.mobyMemberInviteLink));
         const latestLink = await outstandingLinkElements.slice(-1)[0].getAttribute('value');
+
+        // Close secondary's debug panel
+        const debugCloseButton = await secondaryInvitee.findElement(webdriver.By.xpath(xpaths.mobyDebugPanelClose));
+        debugCloseButton.click();
 
         await navigateURL(secondaryInvitee, latestLink);
         expect(secondaryInvitee.wait(until.elementsLocated(webdriver.By.xpath(xpaths.mobyMemberCreateInvite)), 10 * ONE_SECOND)).to.not.throw;
+      });
+
+      it('secondary invitees can make member endorsements', async () => {
+         // Open debug panel and switch to messages pane for inviteCreator
+         const debugOpenButton = await invitee.findElement(webdriver.By.xpath(xpaths.mobyDebugPanelOpen));
+         debugOpenButton.click();
+         const messagesPaneButton = await invitee.findElement(webdriver.By.xpath(xpaths.mobyDebugMessagePanelButton));
+         await messagesPaneButton.click();
+
+        // Let peer call claimIfMember
+        const members = ['sec-invitee-member1', 'sec-invitee-member2'];
+        const expectedMemberEndorsements = members.map(member => `method: claimIfMember, value: TWT:${member}`);
+
+        // Load members elements
+        const claimMemberInput = await secondaryInvitee.findElement(webdriver.By.xpath(xpaths.mobyMemberInputBox));
+        const claimMemberButton = await secondaryInvitee.findElement(webdriver.By.xpath(xpaths.mobyMemberAddToBatchButton));
+
+        // Populate member input boxes
+        for (const member of members) {
+          await claimMemberInput.clear();
+          await claimMemberInput.sendKeys(member);
+          await claimMemberButton.click();
+        }
+
+        // Submit batch of members to p2p network
+        const submitMemberBatchButton = await secondaryInvitee.findElement(webdriver.By.xpath(xpaths.mobyMemberSubmitBatchButton));
+        await submitMemberBatchButton.click();
+
+        // Wait before checking for flood messages
+        await sleep(5 * ONE_SECOND);
+
+        // Reassign report receivers
+        reportReceivers = peerDrivers.slice(0,2).concat(peerDrivers.slice(3));
+
+        // Check if other peers receive the messages
+        await Promise.all(reportReceivers.map(async (reportReceiver) => {
+          // Waiting till the messages have arrived
+          expect( reportReceiver.wait(async function() {
+            // Reading message objects
+            const messageElements = await  reportReceiver.findElements(webdriver.By.xpath(xpaths.mobyDebugMessages));
+            const messages = await Promise.all(
+                messageElements.map(msg => msg.getText())
+            );
+
+            let messagesArrived = true;
+            for (const expectedMemberEndorsement of expectedMemberEndorsements) {
+              if(!messages.includes(expectedMemberEndorsement)){
+                messagesArrived = false;
+              }
+            }
+            return messagesArrived;
+          }, MESSAGE_ARRIVAL_TIMEOUT)).to.not.throw;
+        }));
       });
     });
   });

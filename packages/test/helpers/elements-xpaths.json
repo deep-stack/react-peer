@@ -15,5 +15,5 @@
 	"mobyMemberRevokeInvite": "//button[@data-ref='member.invite.revoke']",
 	"mobyMemberSubmitBatchButton": "//button[@data-ref='members.submitBatch']",
 	"mobyMemberInviteLink": "//input[@data-ref='member.invite.link']",
-	"mobyMemberDropDown": "/html/body/div/div/div[1]/div/div[3]/details/summary"
+	"mobyMemberDropDown": "//summary[@data-ref='member.invites.show']"
 }
