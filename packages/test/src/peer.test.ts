@@ -37,10 +37,17 @@ interface Arguments {
 
 let peerDrivers: WebDriver[] = [];
 let peerIds: string[] = [];
+let allPassed = true;
 
 describe('peer-test', () => {
   afterEach(async function () {
-    if (this.currentTest?.state !== 'passed') {
+    if(this.currentTest?.state === 'pending') {
+      return;
+    }
+
+    allPassed = allPassed && (this.currentTest?.state === 'passed');
+
+    if (!allPassed) {
       // Mark the Browserstack sessions as failed
       await markSessionAsFailed(peerDrivers);
 
@@ -49,13 +56,16 @@ describe('peer-test', () => {
     }
   });
 
+  // Cannot access currentTest.state in after hook
+  // https://stackoverflow.com/a/22050548/12594335
+
   after('after outside', async function () {
-    if (this.currentTest?.state !== 'passed') {
-      // Mark the Browserstack sessions as failed
-      await markSessionAsFailed(peerDrivers);
-    } else {
+    if (allPassed) {
       // Mark the Browserstack sessions as passed
       await markSessionAsPassed(peerDrivers);
+    } else {
+      // Mark the Browserstack sessions as failed
+      await markSessionAsFailed(peerDrivers);
     }
 
     // Quit browser instances
@@ -66,12 +76,19 @@ describe('peer-test', () => {
     before('setup browsers', async () => {
       log('Setting up the browsers')
 
-      const chromeInWindowsCapabilities = new webdriver.Capabilities(new Map(Object.entries(capabilities)));
-      peerDrivers = await setupBrowsersWithCapabilities(BSTACK_SERVER_URL, chromeInWindowsCapabilities);
+      // Try setting up the browsers and exit if any error is thrown
+      try {
+        const chromeInWindowsCapabilities = new webdriver.Capabilities(new Map(Object.entries(capabilities)));
+        peerDrivers = await setupBrowsersWithCapabilities(BSTACK_SERVER_URL, chromeInWindowsCapabilities);
 
-      peerIds = await Promise.all(peerDrivers.map((peerDriver): Promise<string> => {
-        return peerDriver.executeScript(SCRIPT_GET_PEER_ID);
-      }));
+        peerIds = await Promise.all(peerDrivers.map((peerDriver): Promise<string> => {
+          return peerDriver.executeScript(SCRIPT_GET_PEER_ID);
+        }));
+      } catch (err) {
+        log('Error while setting up browsers.')
+        allPassed = false;
+        throw (err);
+      }
 
       log('Setup done')
     });
@@ -98,7 +115,7 @@ describe('peer-test', () => {
       // Navigate to app url
       await navigateURL(reportSender, TEST_APP_MEMBER_URL);
 
-        // Open debug panel
+      // Open debug panel
       await Promise.all(peerDrivers.map(async (peerDriver): Promise<void> => {
         // Open the debug panel button and switch to messages pane
         const debugButton = await peerDriver.findElement(webdriver.By.xpath(xpaths.mobyDebugPanelOpen));
@@ -135,15 +152,15 @@ describe('peer-test', () => {
         expect(reportReceiver.wait( async function() {
           // Read message objects
           const messageElements = await  reportReceiver.findElements(webdriver.By.xpath(xpaths.mobyDebugMessages));
-        const messages = await Promise.all(
+          const messages = await Promise.all(
               messageElements.map(msg => msg.getText())
-        );
+          );
 
           let messagesArrived = true;
-        for (const expectedPhisherReport of expectedPhisherReports) {
+          for (const expectedPhisherReport of expectedPhisherReports) {
             if(!messages.includes(expectedPhisherReport)){
               messagesArrived = false;
-        }
+            }
           }
           return messagesArrived;
         }, MESSAGE_ARRIVAL_TIMEOUT)).to.not.throw;
@@ -183,15 +200,15 @@ describe('peer-test', () => {
         expect(reportReceiver.wait( async function() {
           // Read message objects
           const messageElements = await  reportReceiver.findElements(webdriver.By.xpath(xpaths.mobyDebugMessages));
-        const messages = await Promise.all(
+          const messages = await Promise.all(
               messageElements.map(msg => msg.getText())
-        );
+          );
 
           let messagesArrived = true;
-        for (const expectedMemberEndorsement of expectedMemberEndorsements) {
+          for (const expectedMemberEndorsement of expectedMemberEndorsements) {
             if(!messages.includes(expectedMemberEndorsement)){
               messagesArrived = false;
-        }
+            }
           }
           return messagesArrived;
         }, MESSAGE_ARRIVAL_TIMEOUT)).to.not.throw;
@@ -272,15 +289,15 @@ describe('peer-test', () => {
           expect( reportReceiver.wait(async function() {
             // Reading message objects
             const messageElements = await  reportReceiver.findElements(webdriver.By.xpath(xpaths.mobyDebugMessages));
-          const messages = await Promise.all(
+            const messages = await Promise.all(
                 messageElements.map(msg => msg.getText())
-          );
+            );
 
             let messagesArrived = true;
-          for (const expectedMemberEndorsement of expectedMemberEndorsements) {
+            for (const expectedMemberEndorsement of expectedMemberEndorsements) {
               if(!messages.includes(expectedMemberEndorsement)){
                 messagesArrived = false;
-          }
+              }
             }
             return messagesArrived;
           }, MESSAGE_ARRIVAL_TIMEOUT)).to.not.throw;
