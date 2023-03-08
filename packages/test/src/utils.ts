@@ -1,13 +1,21 @@
 import webdriver, { ThenableWebDriver, WebDriver, logging } from 'selenium-webdriver';
 import debug from 'debug';
+import { ethers } from 'ethers';
 
 import {
   NODE_START_TIMEOUT,
   NODE_PEER_CONN_TIMEOUT,
   NODE_START_CHECK_INTERVAL,
   NODE_PEER_CONN_CHECK_INTERVAL,
-  TOTAL_PEERS
+  TOTAL_PEERS,
+  MESSAGE_CHECK_TIMEOUT
 } from './constants';
+import {
+  SCRIPT_PEER_INIT,
+  SCRIPT_GET_PEER_CONNECTIONS,
+  SCRIPT_GET_MESSAGE_OF_KIND
+} from '../helpers/scripts';
+import { abi as PhisherRegistryABI } from '../helpers/mobymask-artifacts.json'
 
 const log = debug('laconic:test');
 
@@ -16,12 +24,14 @@ export const TEST_APP_MEMBER_URL = process.env.TEST_APP_MEMBER_URL;
 
 const ERR_PEER_INIT_TIMEOUT = 'Peer intialization timed out';
 const ERR_PEER_CONNECTIONS = 'Peer connections timed out';
+const ERR_MSG_NOT_RECEIVED = 'Required message not received';
 
-export const SCRIPT_GET_PEER_ID = 'return window.peer.peerId?.toString()';
-const SCRIPT_PEER_INIT = "return (typeof window.peer !== 'undefined') && window.peer.node.isStarted();";
-const SCRIPT_GET_PEER_CONNECTIONS = `return window.peer.node.getConnections().map(connection => {
-  return connection.remotePeer.toString();
-});`;
+export const MOBYMASK_MESSAGE_KINDS = {
+  INVOKE: 'invoke',
+  REVOKE: 'revoke'
+};
+
+const contractInterface = new ethers.utils.Interface(PhisherRegistryABI);
 
 export const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
 
@@ -115,6 +125,16 @@ export const waitForConnection = async (peerDriver: WebDriver, peerIds: string[]
   await peerDriver.wait(condition, NODE_PEER_CONN_TIMEOUT, ERR_PEER_CONNECTIONS, NODE_PEER_CONN_CHECK_INTERVAL);
 };
 
+export const waitForMessage = async (peerDriver: WebDriver, expectedMsgKind: string, expectedMsgData: any): Promise<void> => {
+  const condition = new webdriver.Condition('peer connection', async (driver) => {
+    const messageReceived: any = await driver.executeAsyncScript(SCRIPT_GET_MESSAGE_OF_KIND, expectedMsgKind);
+
+    return checkMobyMaskMessage(expectedMsgKind, messageReceived, expectedMsgData);
+  });
+
+  await peerDriver.wait(condition, MESSAGE_CHECK_TIMEOUT, ERR_MSG_NOT_RECEIVED, MESSAGE_CHECK_TIMEOUT);
+};
+
 export const sendFlood = async (peerDriver: WebDriver, msg: string): Promise<void> => {
   const floodScript = `floodMessage("${msg}")`;
   await peerDriver.executeScript(floodScript);
@@ -151,3 +171,40 @@ export const markSessionAsPassed = async (peerDrivers: WebDriver[]): Promise<voi
 export const scrollElementIntoView = async (element : webdriver.WebElement): Promise<void> => {
   await element.getDriver().executeScript("arguments[0].scrollIntoView(true);", element);
 };
+
+const checkMobyMaskMessage = (kind: string, actualData: any, expectedData: any): boolean => {
+  switch (kind) {
+    case MOBYMASK_MESSAGE_KINDS.INVOKE: {
+      const [{ invocations: { batch: invocationsList } }] = actualData;
+      const invocationsListArray = Array.from(invocationsList);
+
+      if (invocationsListArray.length !== Array.from(expectedData).length) {
+        return false
+      }
+
+      invocationsListArray.forEach((invocation: any, index) => {
+        const txData = invocation.transaction.data;
+        const decoded = contractInterface.parseTransaction({ data: txData });
+
+        const expectedEntry = expectedData[index];
+        if (decoded.name !== expectedEntry.name || decoded.args[0] !== expectedEntry.value) {
+          return false
+        }
+      });
+
+      console.log('msg found');
+      return true
+    }
+
+    case MOBYMASK_MESSAGE_KINDS.REVOKE: {
+      const { signedDelegation } = actualData;
+
+      // TODO Check signedDelegation
+
+      return true
+    }
+
+    default:
+      return false;
+  }
+}

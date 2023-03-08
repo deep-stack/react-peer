@@ -13,3 +13,6 @@ export const NODE_PEER_CONN_CHECK_INTERVAL = 5 * ONE_SECOND; // 5s
 // Time to wait for before checking for flood messages
 export const FLOOD_CHECK_DELAY = 10 * ONE_SECOND; // 10s
 export const MESSAGE_ARRIVAL_TIMEOUT = 10 * ONE_SECOND; // 10s
+
+// Time to wait for flood messages to be received
+export const MESSAGE_CHECK_TIMEOUT = 30 * ONE_SECOND; // 30s

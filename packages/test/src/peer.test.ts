@@ -5,6 +5,7 @@ import * as dotenv from 'dotenv';
 import debug from 'debug';
 import 'mocha';
 import { expect } from 'chai';
+import assert from 'assert';
 import webdriver, { until, WebDriver } from 'selenium-webdriver';
 
 import {
@@ -15,14 +16,16 @@ import {
   quitBrowsers,
   capabilities,
   setupBrowsersWithCapabilities,
-  SCRIPT_GET_PEER_ID,
   markSessionAsFailed,
   TEST_APP_MEMBER_URL,
   navigateURL,
   markSessionAsPassed,
-  scrollElementIntoView
+  scrollElementIntoView,
+  waitForMessage,
+  MOBYMASK_MESSAGE_KINDS
 } from './utils';
 import { FLOOD_CHECK_DELAY, MESSAGE_ARRIVAL_TIMEOUT, ONE_SECOND } from './constants';
+import { SCRIPT_GET_PEER_ID } from '../helpers/scripts';
 import xpaths from '../helpers/elements-xpaths.json';
 
 dotenv.config({ path: path.resolve(__dirname, '../.env') });
@@ -128,6 +131,9 @@ describe('peer-test', () => {
       // Test input values
       const phishers = ['phisher1', 'phisher2'];
       const expectedPhisherReports = phishers.map(phisher => `method: claimIfPhisher, value: TWT:${phisher}`);
+      const expectedData = phishers.map(phisher => {
+        return { name: 'claimIfPhisher', value: phisher };
+      });
 
       // Load phishers elements
       const claimPhisherInput = await reportSender.findElement(webdriver.By.xpath(xpaths.mobyPhisherInputBox));
@@ -144,7 +150,14 @@ describe('peer-test', () => {
       // Submit batch of phishers to p2p network
       const submitPhisherBatchButton = await reportSender.findElement(webdriver.By.xpath(xpaths.mobyPhisherSubmitBatchButton));
       await scrollElementIntoView(submitPhisherBatchButton);
+
+      // Setup message listeners
+      const msgCheckPromises = reportReceivers.map(async (reportReceiver) => {
+        await waitForMessage(reportReceiver, MOBYMASK_MESSAGE_KINDS.INVOKE, expectedData);
+      });
+
       await submitPhisherBatchButton.click();
+      await Promise.all(msgCheckPromises);
 
       // Check if other peers receive the messages
       await Promise.all(reportReceivers.map(async (reportReceiver) => {
@@ -177,6 +190,9 @@ describe('peer-test', () => {
       // Test input values
       const members = ['member1', 'member2'];
       const expectedMemberEndorsements = members.map(member => `method: claimIfMember, value: TWT:${member}`);
+      const expectedData = members.map(member => {
+        return { name: 'claimIfMember', value: member };
+      });
 
       // Load members elements
       const claimMemberInput = await reportSender.findElement(webdriver.By.xpath(xpaths.mobyMemberInputBox));
@@ -192,7 +208,14 @@ describe('peer-test', () => {
       // Submit batch of members to p2p network
       const submitMemberBatchButton = await reportSender.findElement(webdriver.By.xpath(xpaths.mobyMemberSubmitBatchButton));
       await scrollElementIntoView(submitMemberBatchButton);
+
+      // Setup message listeners
+      const msgCheckPromises = reportReceivers.map(async (reportReceiver) => {
+        await waitForMessage(reportReceiver, MOBYMASK_MESSAGE_KINDS.INVOKE, expectedData);
+      });
+
       await submitMemberBatchButton.click();
+      await Promise.all(msgCheckPromises);
 
       // Check if other peers receive the messages
       await Promise.all(reportReceivers.map(async (reportReceiver) => {
@@ -219,6 +242,7 @@ describe('peer-test', () => {
       let invitor: webdriver.WebDriver;
       let invitee: webdriver.WebDriver;
       let secondaryInvitee: webdriver.WebDriver;
+      let secondaryInviteLink: string;
       let reportReceivers : webdriver.WebDriver[];
 
       // Select first peer as the phishing reporter, rest as report receivers
@@ -255,7 +279,6 @@ describe('peer-test', () => {
         const outstandingLinkElements = await invitor.findElements(webdriver.By.xpath(xpaths.mobyMemberInviteLink));
         const latestLink = await outstandingLinkElements.slice(-1)[0].getAttribute('value');
 
-
         // Let invitee peer navigate to the created invite link
         await navigateURL(invitee, latestLink);
         expect(invitee.wait(until.elementsLocated(webdriver.By.xpath(xpaths.mobyMemberCreateInvite)), 10 * ONE_SECOND)).to.not.throw;
@@ -265,6 +288,9 @@ describe('peer-test', () => {
         // Let peer call claimIfMember
         const members = ['invitee-member1', 'invitee-member2'];
         const expectedMemberEndorsements = members.map(member => `method: claimIfMember, value: TWT:${member}`);
+        const expectedData = members.map(member => {
+          return { name: 'claimIfMember', value: member };
+        });
 
         // Load members elements
         const claimMemberInput = await invitee.findElement(webdriver.By.xpath(xpaths.mobyMemberInputBox));
@@ -281,7 +307,14 @@ describe('peer-test', () => {
         // Submit batch of members to p2p network
         const submitMemberBatchButton = await invitee.findElement(webdriver.By.xpath(xpaths.mobyMemberSubmitBatchButton));
         await scrollElementIntoView(submitMemberBatchButton);
+
+        // Setup message listeners
+        const msgCheckPromises = reportReceivers.map(async (reportReceiver) => {
+          await waitForMessage(reportReceiver, MOBYMASK_MESSAGE_KINDS.INVOKE, expectedData);
+        });
+
         await submitMemberBatchButton.click();
+        await Promise.all(msgCheckPromises);
 
         // Check if other peers receive the messages
         await Promise.all(reportReceivers.map(async (reportReceiver) => {
@@ -333,7 +366,7 @@ describe('peer-test', () => {
         // Get the recently created invite link
         const outstandingLinkElements = await invitee.findElements(webdriver.By.xpath(xpaths.mobyMemberInviteLink));
         const latestLink = await outstandingLinkElements.slice(-1)[0].getAttribute('value');
-
+        secondaryInviteLink = latestLink;
 
         await navigateURL(secondaryInvitee, latestLink);
         expect(secondaryInvitee.wait(until.elementsLocated(webdriver.By.xpath(xpaths.mobyMemberCreateInvite)), 10 * ONE_SECOND)).to.not.throw;
@@ -343,6 +376,9 @@ describe('peer-test', () => {
         // Let peer call claimIfMember
         const members = ['sec-invitee-member1', 'sec-invitee-member2'];
         const expectedMemberEndorsements = members.map(member => `method: claimIfMember, value: TWT:${member}`);
+        const expectedData = members.map(member => {
+          return { name: 'claimIfMember', value: member };
+        });
 
         // Load members elements
         const claimMemberInput = await secondaryInvitee.findElement(webdriver.By.xpath(xpaths.mobyMemberInputBox));
@@ -359,10 +395,17 @@ describe('peer-test', () => {
         // Submit batch of members to p2p network
         const submitMemberBatchButton = await secondaryInvitee.findElement(webdriver.By.xpath(xpaths.mobyMemberSubmitBatchButton));
         await scrollElementIntoView(submitMemberBatchButton);
-        await submitMemberBatchButton.click();
 
         // Reassign report receivers
         reportReceivers = peerDrivers.slice(0,2).concat(peerDrivers.slice(3));
+
+        // Setup message listeners
+        const msgCheckPromises = reportReceivers.map(async (reportReceiver) => {
+          await waitForMessage(reportReceiver, MOBYMASK_MESSAGE_KINDS.INVOKE, expectedData);
+        });
+
+        await submitMemberBatchButton.click();
+        await Promise.all(msgCheckPromises);
 
         // Check if other peers receive the messages
         await Promise.all(reportReceivers.map(async (reportReceiver) => {
@@ -386,10 +429,28 @@ describe('peer-test', () => {
       });
 
       it('invited members can revoke links created by them', async () => {
-        // To be run with above tests
+        // To be run along with the test to create invite link from invited members
+
+        const inviteURL = new URL(secondaryInviteLink);
+        const invitationString = inviteURL.searchParams.get('invitation');
+        assert(invitationString != null);
+
+        const signedDelegation = JSON.parse(invitationString).signedDelegations[0];
+        const expectedData = signedDelegation;
+
         const revokeInviteButton = invitee.findElement(webdriver.By.xpath(xpaths.mobyMemberRevokeInvite))
         await scrollElementIntoView(revokeInviteButton);
+
+        // Reassign report receivers
+        reportReceivers = peerDrivers.slice(2).concat(peerDrivers[0]);
+
+        // Setup message listeners
+        const msgCheckPromises = reportReceivers.map(async (reportReceiver) => {
+          await waitForMessage(reportReceiver, MOBYMASK_MESSAGE_KINDS.REVOKE, expectedData);
+        });
+
         revokeInviteButton.click();
+        await Promise.all(msgCheckPromises);
 
         const inviteePeerId: string = await invitee.executeScript(SCRIPT_GET_PEER_ID);
 
@@ -399,7 +460,6 @@ describe('peer-test', () => {
         const expectedMessageHeader = `Received a message on mobymask P2P network from peer: ${inviteePeerId} (${inviteePseudonym}) \n Signed delegation:`;
         const expectedRevocationMessage = 'Signed intention to revoke:';
 
-        reportReceivers = peerDrivers.slice(2).concat(peerDrivers[0]);
 
         // Check if other peers receive the messages
         await Promise.all(reportReceivers.map(async (reportReceiver) => {
