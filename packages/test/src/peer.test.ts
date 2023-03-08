@@ -42,17 +42,21 @@ interface Arguments {
 
 let peerDrivers: WebDriver[] = [];
 let peerIds: string[] = [];
-let allPassed = true;
+
+// Use a flag since we cannot access currentTest.state in the after hook
+// https://stackoverflow.com/a/22050548/12594335
+let testFailed = false;
 
 describe('peer-test', () => {
   afterEach(async function () {
+    // Skip block if test is skipped
     if (this.currentTest?.state === 'pending') {
       return;
     }
 
-    allPassed = allPassed && (this.currentTest?.state === 'passed');
+    testFailed = this.currentTest?.state !== 'passed';
 
-    if (!allPassed) {
+    if (testFailed) {
       // Mark the Browserstack sessions as failed
       await markSessionAsFailed(peerDrivers);
 
@@ -61,16 +65,13 @@ describe('peer-test', () => {
     }
   });
 
-  // Cannot access currentTest.state in after hook
-  // https://stackoverflow.com/a/22050548/12594335
-
   after('after outside', async function () {
-    if (allPassed) {
-      // Mark the Browserstack sessions as passed
-      await markSessionAsPassed(peerDrivers);
-    } else {
+    if (testFailed) {
       // Mark the Browserstack sessions as failed
       await markSessionAsFailed(peerDrivers);
+    } else {
+      // Mark the Browserstack sessions as passed
+      await markSessionAsPassed(peerDrivers);
     }
 
     // Quit browser instances
@@ -90,8 +91,8 @@ describe('peer-test', () => {
           return peerDriver.executeScript(SCRIPT_GET_PEER_ID);
         }));
       } catch (err) {
-        log('Error while setting up browsers.');
-        allPassed = false;
+        log('Error while setting up browsers');
+        testFailed = true;
         throw (err);
       }
 
