@@ -12,8 +12,6 @@ const expectedKind = arguments[0];
 const done = arguments[arguments.length - 1];
 window.peer.subscribeTopic('mobymask', (peerId, data) => {
   const { kind, message } = data;
-  console.log("received message of kind", kind);
-  console.log("want", expectedKind);
 
   if (kind === expectedKind) {
     done(message);

@@ -126,7 +126,7 @@ export const waitForConnection = async (peerDriver: WebDriver, peerIds: string[]
 };
 
 export const waitForMessage = async (peerDriver: WebDriver, expectedMsgKind: string, expectedMsgData: any): Promise<void> => {
-  const condition = new webdriver.Condition('peer connection', async (driver) => {
+  const condition = new webdriver.Condition('message check', async (driver) => {
     const messageReceived: any = await driver.executeAsyncScript(SCRIPT_GET_MESSAGE_OF_KIND, expectedMsgKind);
 
     return checkMobyMaskMessage(expectedMsgKind, messageReceived, expectedMsgData);
@@ -192,7 +192,6 @@ const checkMobyMaskMessage = (kind: string, actualData: any, expectedData: any):
         }
       });
 
-      console.log('msg found');
       return true
     }
 
