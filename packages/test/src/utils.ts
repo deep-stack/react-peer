@@ -16,7 +16,7 @@ import {
   SCRIPT_GET_PEER_CONNECTIONS,
   SCRIPT_GET_MESSAGE_OF_KIND
 } from '../helpers/scripts';
-import { abi as PhisherRegistryABI } from '../helpers/mobymask-artifacts.json'
+import { abi as PhisherRegistryABI } from '../helpers/mobymask-artifacts.json';
 
 const log = debug('laconic:test');
 
@@ -101,7 +101,7 @@ export const startABrowserPeer = async (serverURL: string, capabilities: webdriv
 
 export const navigateURL = async (peerDriver: WebDriver, url: string): Promise<void> => {
   return peerDriver.get(url);
-}
+};
 
 // Wait for the peer node to be connected to one of the provided peer ids
 export const waitForConnection = async (peerDriver: WebDriver, peerIds: string[]): Promise<void> => {
@@ -170,7 +170,7 @@ export const markSessionAsPassed = async (peerDrivers: WebDriver[]): Promise<voi
 };
 
 export const scrollElementIntoView = async (element : webdriver.WebElement): Promise<void> => {
-  await element.getDriver().executeScript("arguments[0].scrollIntoView(true);", element);
+  await element.getDriver().executeScript('arguments[0].scrollIntoView(true);', element);
 };
 
 const checkMobyMaskMessage = (kind: string, actualData: any, expectedData: any): boolean => {
@@ -180,7 +180,7 @@ const checkMobyMaskMessage = (kind: string, actualData: any, expectedData: any):
       const invocationsListArray = Array.from(invocationsList);
 
       if (invocationsListArray.length !== Array.from(expectedData).length) {
-        return false
+        return false;
       }
 
       invocationsListArray.forEach((invocation: any, index) => {
@@ -189,11 +189,11 @@ const checkMobyMaskMessage = (kind: string, actualData: any, expectedData: any):
 
         const expectedEntry = expectedData[index];
         if (decoded.name !== expectedEntry.name || decoded.args[0] !== expectedEntry.value) {
-          return false
+          return false;
         }
       });
 
-      return true
+      return true;
     }
 
     case MOBYMASK_MESSAGE_KINDS.REVOKE: {
@@ -204,4 +204,4 @@ const checkMobyMaskMessage = (kind: string, actualData: any, expectedData: any):
     default:
       return false;
   }
-}
+};

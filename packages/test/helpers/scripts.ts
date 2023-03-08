@@ -16,4 +16,4 @@ window.peer.subscribeTopic('mobymask', (peerId, data) => {
   if (kind === expectedKind) {
     done(message);
   }
-});`
+});`;

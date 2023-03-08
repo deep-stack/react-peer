@@ -1,3 +1,5 @@
+/* eslint-disable no-unused-expressions */
+
 import yargs from 'yargs';
 import { hideBin } from 'yargs/helpers';
 import path from 'path';
@@ -44,7 +46,7 @@ let allPassed = true;
 
 describe('peer-test', () => {
   afterEach(async function () {
-    if(this.currentTest?.state === 'pending') {
+    if (this.currentTest?.state === 'pending') {
       return;
     }
 
@@ -77,7 +79,7 @@ describe('peer-test', () => {
 
   describe('peer-connectivity-tests', () => {
     before('setup browsers', async () => {
-      log('Setting up the browsers')
+      log('Setting up the browsers');
 
       // Try setting up the browsers and exit if any error is thrown
       try {
@@ -88,12 +90,12 @@ describe('peer-test', () => {
           return peerDriver.executeScript(SCRIPT_GET_PEER_ID);
         }));
       } catch (err) {
-        log('Error while setting up browsers.')
+        log('Error while setting up browsers.');
         allPassed = false;
         throw (err);
       }
 
-      log('Setup done')
+      log('Setup done');
     });
 
     it('every peer connects to at least one of the simulated peers', async () => {
@@ -162,16 +164,16 @@ describe('peer-test', () => {
       // Check if other peers receive the messages
       await Promise.all(reportReceivers.map(async (reportReceiver) => {
         // Waiting till the messages have arrived
-        expect(reportReceiver.wait( async function() {
+        expect(reportReceiver.wait(async function () {
           // Read message objects
-          const messageElements = await  reportReceiver.findElements(webdriver.By.xpath(xpaths.mobyDebugMessages));
+          const messageElements = await reportReceiver.findElements(webdriver.By.xpath(xpaths.mobyDebugMessages));
           const messages = await Promise.all(
-              messageElements.map(msg => msg.getText())
+            messageElements.map(msg => msg.getText())
           );
 
           let messagesArrived = true;
           for (const expectedPhisherReport of expectedPhisherReports) {
-            if(!messages.find(msg => msg.includes(expectedPhisherReport))){
+            if (!messages.find(msg => msg.includes(expectedPhisherReport))) {
               messagesArrived = false;
             }
           }
@@ -220,16 +222,16 @@ describe('peer-test', () => {
       // Check if other peers receive the messages
       await Promise.all(reportReceivers.map(async (reportReceiver) => {
         // Waiting till the messages have arrived
-        expect(reportReceiver.wait( async function() {
+        expect(reportReceiver.wait(async function () {
           // Read message objects
-          const messageElements = await  reportReceiver.findElements(webdriver.By.xpath(xpaths.mobyDebugMessages));
+          const messageElements = await reportReceiver.findElements(webdriver.By.xpath(xpaths.mobyDebugMessages));
           const messages = await Promise.all(
-              messageElements.map(msg => msg.getText())
+            messageElements.map(msg => msg.getText())
           );
 
           let messagesArrived = true;
           for (const expectedMemberEndorsement of expectedMemberEndorsements) {
-            if(!messages.find(msg => msg.includes(expectedMemberEndorsement))){
+            if (!messages.find(msg => msg.includes(expectedMemberEndorsement))) {
               messagesArrived = false;
             }
           }
@@ -238,7 +240,7 @@ describe('peer-test', () => {
       }));
     });
 
-    describe('test invite links', async() => {
+    describe('test invite links', async () => {
       let invitor: webdriver.WebDriver;
       let invitee: webdriver.WebDriver;
       let secondaryInvitee: webdriver.WebDriver;
@@ -263,7 +265,7 @@ describe('peer-test', () => {
         await createInviteButton.click();
 
         await invitor.wait(until.alertIsPresent(), 3 * ONE_SECOND);
-        await invitor.switchTo().alert().sendKeys("Member1");
+        await invitor.switchTo().alert().sendKeys('Member1');
         await invitor.switchTo().alert().accept();
 
         // Wait for confirmation alert
@@ -319,16 +321,16 @@ describe('peer-test', () => {
         // Check if other peers receive the messages
         await Promise.all(reportReceivers.map(async (reportReceiver) => {
           // Waiting till the messages have arrived
-          expect( reportReceiver.wait(async function() {
+          expect(reportReceiver.wait(async function () {
             // Reading message objects
-            const messageElements = await  reportReceiver.findElements(webdriver.By.xpath(xpaths.mobyDebugMessages));
+            const messageElements = await reportReceiver.findElements(webdriver.By.xpath(xpaths.mobyDebugMessages));
             const messages = await Promise.all(
-                messageElements.map(msg => msg.getText())
+              messageElements.map(msg => msg.getText())
             );
 
             let messagesArrived = true;
             for (const expectedMemberEndorsement of expectedMemberEndorsements) {
-              if(!messages.find(msg => msg.includes(expectedMemberEndorsement))){
+              if (!messages.find(msg => msg.includes(expectedMemberEndorsement))) {
                 messagesArrived = false;
               }
             }
@@ -352,7 +354,7 @@ describe('peer-test', () => {
         await createInviteButton.click();
 
         await invitee.wait(until.alertIsPresent(), 3 * ONE_SECOND);
-        await invitee.switchTo().alert().sendKeys("Member2");
+        await invitee.switchTo().alert().sendKeys('Member2');
         await invitee.switchTo().alert().accept();
 
         await invitee.wait(until.alertIsPresent(), 3 * ONE_SECOND);
@@ -397,7 +399,7 @@ describe('peer-test', () => {
         await scrollElementIntoView(submitMemberBatchButton);
 
         // Reassign report receivers
-        reportReceivers = peerDrivers.slice(0,2).concat(peerDrivers.slice(3));
+        reportReceivers = peerDrivers.slice(0, 2).concat(peerDrivers.slice(3));
 
         // Setup message listeners
         const msgCheckPromises = reportReceivers.map(async (reportReceiver) => {
@@ -410,16 +412,16 @@ describe('peer-test', () => {
         // Check if other peers receive the messages
         await Promise.all(reportReceivers.map(async (reportReceiver) => {
           // Waiting till the messages have arrived
-          expect( reportReceiver.wait(async function() {
+          expect(reportReceiver.wait(async function () {
             // Reading message objects
-            const messageElements = await  reportReceiver.findElements(webdriver.By.xpath(xpaths.mobyDebugMessages));
+            const messageElements = await reportReceiver.findElements(webdriver.By.xpath(xpaths.mobyDebugMessages));
             const messages = await Promise.all(
-                messageElements.map(msg => msg.getText())
+              messageElements.map(msg => msg.getText())
             );
 
             let messagesArrived = true;
             for (const expectedMemberEndorsement of expectedMemberEndorsements) {
-              if(!messages.find(msg => msg.includes(expectedMemberEndorsement))){
+              if (!messages.find(msg => msg.includes(expectedMemberEndorsement))) {
                 messagesArrived = false;
               }
             }
@@ -438,7 +440,7 @@ describe('peer-test', () => {
         const signedDelegation = JSON.parse(invitationString).signedDelegations[0];
         const expectedData = signedDelegation;
 
-        const revokeInviteButton = invitee.findElement(webdriver.By.xpath(xpaths.mobyMemberRevokeInvite))
+        const revokeInviteButton = invitee.findElement(webdriver.By.xpath(xpaths.mobyMemberRevokeInvite));
         await scrollElementIntoView(revokeInviteButton);
 
         // Reassign report receivers
@@ -460,14 +462,13 @@ describe('peer-test', () => {
         const expectedMessageHeader = `Received a message on mobymask P2P network from peer: ${inviteePeerId} (${inviteePseudonym}) \n Signed delegation:`;
         const expectedRevocationMessage = 'Signed intention to revoke:';
 
-
         // Check if other peers receive the messages
         await Promise.all(reportReceivers.map(async (reportReceiver) => {
           // Waiting till the messages have arrived
-          expect( reportReceiver.wait(async function() {
+          expect(reportReceiver.wait(async function () {
             // Get the last message text
-            const messageElements = await  reportReceiver.findElements(webdriver.By.xpath(xpaths.mobyDebugMessages));
-            const message = await messageElements[messageElements.length-1].getText();
+            const messageElements = await reportReceiver.findElements(webdriver.By.xpath(xpaths.mobyDebugMessages));
+            const message = await messageElements[messageElements.length - 1].getText();
 
             return (message.includes(expectedMessageHeader) && message.includes(expectedRevocationMessage));
           }, MESSAGE_ARRIVAL_TIMEOUT)).to.not.throw;
@@ -480,7 +481,7 @@ describe('peer-test', () => {
     it('peers send and receive flood messages', async () => {
       // Skip/pass this test if testing with < 2 peers
       if (peerDrivers.length < 2) {
-        log('Skipping test as number of peers < 2')
+        log('Skipping test as number of peers < 2');
         return;
       }
 
@@ -535,7 +536,7 @@ function _getArgv (): Arguments {
   }).options({
     mobymask: {
       type: 'boolean',
-      describe: "Whether to run mobymask tests",
+      describe: 'Whether to run mobymask tests',
       default: false
     }
   }).parseSync();
