@@ -1,6 +1,7 @@
 import webdriver, { ThenableWebDriver, WebDriver, logging } from 'selenium-webdriver';
 import debug from 'debug';
 import { ethers } from 'ethers';
+import _ from 'lodash';
 
 import {
   NODE_START_TIMEOUT,
@@ -197,10 +198,7 @@ const checkMobyMaskMessage = (kind: string, actualData: any, expectedData: any):
 
     case MOBYMASK_MESSAGE_KINDS.REVOKE: {
       const { signedDelegation } = actualData;
-
-      // TODO Check signedDelegation
-
-      return true
+      return _.isEqual(signedDelegation, expectedData);
     }
 
     default:
