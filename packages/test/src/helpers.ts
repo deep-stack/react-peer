@@ -9,7 +9,7 @@ import {
   getSignedDelegationFromInvite
 } from './utils';
 import { MESSAGE_ARRIVAL_TIMEOUT, ONE_SECOND } from './constants';
-import xpaths from '../helpers/elements-xpaths.json';
+import xpaths from '../utils/elements-xpaths.json';
 import { closeDebugPanel, navigateURL, openDebugPanel, scrollElementIntoView, waitForMessage } from './driver-utils';
 
 export async function testPhisherReports (reportSender: WebDriver, reportReceivers: WebDriver[], phishers: string[]): Promise<void> {

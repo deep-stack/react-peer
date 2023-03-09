@@ -14,12 +14,11 @@ import {
   sendFlood,
   getLogs,
   quitBrowsers,
-  capabilities,
-  setupBrowsersWithCapabilities,
   markSessionAsFailed,
   navigateURL,
   markSessionAsPassed,
-  SCRIPT_GET_PEER_ID
+  SCRIPT_GET_PEER_ID,
+  setupBrowsers
 } from './driver-utils';
 import { FLOOD_CHECK_DELAY } from './constants';
 import { testInvitation, testInviteRevocation, testMemberEndorsements, testPhisherReports } from './helpers';
@@ -60,7 +59,7 @@ describe('peer-test', () => {
     }
   });
 
-  after('after outside', async function () {
+  after(async function () {
     if (!testFailed) {
       // Mark the Browserstack sessions as passed
       await markSessionAsPassed(peerDrivers);
@@ -76,9 +75,7 @@ describe('peer-test', () => {
 
       // Try setting up the browsers and exit if any error is thrown
       try {
-        const chromeInWindowsCapabilities = new webdriver.Capabilities(new Map(Object.entries(capabilities)));
-        peerDrivers = await setupBrowsersWithCapabilities(BSTACK_SERVER_URL, chromeInWindowsCapabilities);
-
+        peerDrivers = await setupBrowsers(BSTACK_SERVER_URL);
         peerIds = await Promise.all(peerDrivers.map((peerDriver): Promise<string> => {
           return peerDriver.executeScript(SCRIPT_GET_PEER_ID);
         }));

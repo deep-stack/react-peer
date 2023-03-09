@@ -10,8 +10,8 @@ import {
   TOTAL_PEERS,
   MESSAGE_CHECK_TIMEOUT
 } from './constants';
-import xpaths from '../helpers/elements-xpaths.json';
-import { TEST_APP_URL, checkMobyMaskMessage } from './utils';
+import xpaths from '../utils/elements-xpaths.json';
+import { TEST_APP_URL, checkMobyMaskMessage, getCurrentDateAndTime } from './utils';
 
 const log = debug('laconic:test');
 
@@ -44,23 +44,62 @@ window.peer.subscribeTopic('mobymask', (peerId, data) => {
   }
 });`;
 
-export const capabilities = {
-  'bstack:options': {
-    os: 'Windows',
+const osBrowserCombinations = [
+  {
+    osName: 'Windows',
     osVersion: '11',
-    browserVersion: '110.0',
-    buildName: 'Automated-peer-test-build-1',
-    sessionName: 'Parallel test 1'
+    browserName: 'Chrome',
+    browserVersion: '110.0'
   },
-  browserName: 'Chrome'
+  {
+    osName: 'OS X',
+    osVersion: 'Monterey',
+    browserName: 'Chrome',
+    browserVersion: '110.0'
+  },
+  {
+    osName: 'Windows',
+    osVersion: '10',
+    browserName: 'Chrome',
+    browserVersion: '110.0'
+  },
+  {
+    osName: 'Windows',
+    osVersion: '11',
+    browserName: 'Chrome',
+    browserVersion: '108.0'
+  },
+  {
+    osName: 'OS X',
+    osVersion: 'Monterey',
+    browserName: 'Chrome',
+    browserVersion: '108.0'
+  }
+];
+
+const getBrowserCapabilities = (buildName: string, osBrowserCombination: any, index: number): webdriver.Capabilities => {
+  const capabilities = {
+    'bstack:options': {
+      os: osBrowserCombination.osName,
+      osVersion: osBrowserCombination.osVersion,
+      browserVersion: osBrowserCombination.browserVersion,
+      buildName,
+      sessionName: `${index}-${osBrowserCombination.osName}-${osBrowserCombination.browserName}`
+    },
+    browserName: osBrowserCombination.browserName
+  };
+
+  return new webdriver.Capabilities(new Map(Object.entries(capabilities)));
 };
 
-export async function setupBrowsersWithCapabilities (serverURL: string, capabilities: webdriver.Capabilities): Promise<WebDriver[]> {
+export async function setupBrowsers (serverURL: string): Promise<WebDriver[]> {
   let peerDrivers: WebDriver[] = [];
+  const buildName = `Build-${getCurrentDateAndTime()}`;
 
   try {
     const peerDriverPromises: Promise<ThenableWebDriver>[] = [];
     for (let i = 0; i < TOTAL_PEERS; i++) {
+      const capabilities = getBrowserCapabilities(buildName, osBrowserCombinations[i % osBrowserCombinations.length], i);
       peerDriverPromises.push(startABrowserPeer(serverURL, capabilities));
     }
 
@@ -68,12 +107,6 @@ export async function setupBrowsersWithCapabilities (serverURL: string, capabili
     log('All browser peers started');
   } catch (err) {
     log('Setup failed');
-    peerDrivers.forEach(async (driver) => {
-      await driver.executeScript(
-        'browserstack_executor: {"action": "setSessionStatus", "arguments": {"status":"failed","reason": "Some elements failed to load!"}}'
-      );
-    });
-
     throw err;
   }
 
@@ -111,8 +144,8 @@ export const navigateURL = async (peerDriver: WebDriver, url: string): Promise<v
   return peerDriver.get(url);
 };
 
-// Wait for the peer node to be connected to one of the provided peer ids
 export const waitForConnection = async (peerDriver: WebDriver, peerIds: string[]): Promise<void> => {
+  // Wait for the peer node to be connected to one of the provided peer ids
   const condition = new webdriver.Condition('peer connection', async (driver) => {
     const connectedPeerIds: string[] = await driver.executeScript(SCRIPT_GET_PEER_CONNECTIONS);
 
