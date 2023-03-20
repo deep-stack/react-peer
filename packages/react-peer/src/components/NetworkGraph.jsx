@@ -21,7 +21,7 @@ const STYLES = {
   }
 }
 
-export function NetworkGraph ({ refreshInterval = DEFAULT_REFRESH_INTERVAL, sx, ...props }) {
+export function NetworkGraph ({ refreshInterval = DEFAULT_REFRESH_INTERVAL, sx, containerHeight, ...props }) {
   const peer = useContext(PeerContext);
   const [isLoading, setIsLoading] = useState(false)
   const [debugInfos, setDebugInfos] = useState([])
@@ -35,7 +35,7 @@ export function NetworkGraph ({ refreshInterval = DEFAULT_REFRESH_INTERVAL, sx, 
     setIsLoading(true)
     setData({ nodes: [], links: [] })
     peer.requestPeerInfo();
-    
+
     const updateSelfDebugInfo = async () => {
       const selfDebugInfo = await peer.getInfo();
       selfDebugInfo.selfInfo.isSelf = true;
@@ -119,6 +119,7 @@ export function NetworkGraph ({ refreshInterval = DEFAULT_REFRESH_INTERVAL, sx, 
           data={data}
           peer={peer}
           nodeCharge={-1000}
+          containerHeight={containerHeight}
         />
       </Box>
     </ScopedCssBaseline>

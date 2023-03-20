@@ -1,5 +1,9 @@
 import React, { useRef, useCallback, useEffect, useState, useMemo } from "react"
 import * as d3 from "d3";
+import useResizeObserver from "use-resize-observer";
+import throttle from "lodash/throttle";
+
+const RESIZE_THROTTLE_TIME = 500; // ms
 
 function ForceDirectedGraph ({
   data,
@@ -10,7 +14,7 @@ function ForceDirectedGraph ({
   nodeCharge = -250
 }) {
   const containerRef = useRef(null)
-  const [containerWidth, setContainerWidth] = useState(0)
+  const { width: containerWidth } = useResizeObserver({ ref: containerRef });
 
   const { current: simulation } = useRef(d3.forceSimulation()
     .force(
@@ -84,12 +88,6 @@ function ForceDirectedGraph ({
     labelRef.current.attr("transform", transform);
   }, [onClickNode])
 
-  const measuredRef = useCallback(node => {
-    if (node !== null) {
-      setContainerWidth(node.getBoundingClientRect().width);
-    }
-  }, []);
-
   useEffect(() => {
     // Set d3 SVG group references on mount
     // SVG group for links
@@ -112,11 +110,11 @@ function ForceDirectedGraph ({
         .attr("y1", d => d.source.y)
         .attr("x2", d => d.target.x)
         .attr("y2", d => d.target.y);
-    
+
       nodeRef.current
         .attr("cx", d => d.x)
         .attr("cy", d => d.y);
-    
+
       labelRef.current
         .attr("x", d => d.x)
         .attr("y", d => d.y);
@@ -125,7 +123,7 @@ function ForceDirectedGraph ({
     // Existing listener is replaced on registering new one
     simulation.on("tick", onTick);
 
-    // Append the d3 root element to container div 
+    // Append the d3 root element to container div
     containerRef.current.append(svgRef.current.node());
   }, []);
 
@@ -133,18 +131,25 @@ function ForceDirectedGraph ({
     svgRef.current.call(zoom);
   }, [zoom])
 
+  const throttledUpdateViewBox = useMemo(
+    () => throttle((width, height) => {
+      svgRef.current.attr("viewBox", [0, 0, width, height])
+      simulation.force("center", d3.forceCenter(width / 2, height / 2));
+      zoom.extent([[0, 0], [width, height]])
+    }, RESIZE_THROTTLE_TIME),
+    [zoom]
+  );
+
   useEffect(() => {
     if (!containerWidth) {
       return
     }
 
-    svgRef.current.attr("viewBox", [0, 0, containerWidth, containerHeight])
-    simulation.force("center", d3.forceCenter(containerWidth / 2, containerHeight / 2));
-    zoom.extent([[0, 0], [containerWidth, containerHeight]])
+    throttledUpdateViewBox(containerWidth, containerHeight);
   }, [
     containerWidth,
     containerHeight,
-    zoom
+    throttledUpdateViewBox
   ])
 
   useEffect(() => {
@@ -152,9 +157,7 @@ function ForceDirectedGraph ({
   }, [data, update])
 
   return (
-    <div ref={measuredRef}>
-      <div ref={containerRef} />
-    </div>
+    <div ref={containerRef} />
   )
 }
 

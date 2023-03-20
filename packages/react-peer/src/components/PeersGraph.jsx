@@ -9,7 +9,7 @@ import GraphWithTooltip from './GraphWithTooltip';
 import { useThrottledCallback } from '../hooks/throttledCallback';
 import { updateGraphDataWithDebugInfo } from '../utils';
 
-export function PeersGraph ({ refreshInterval = DEFAULT_REFRESH_INTERVAL, ...props }) {
+export function PeersGraph ({ refreshInterval = DEFAULT_REFRESH_INTERVAL, containerHeight, ...props }) {
   const peer = useContext(PeerContext);
   const [connections, setConnections] = useState([]);
 
@@ -85,6 +85,7 @@ export function PeersGraph ({ refreshInterval = DEFAULT_REFRESH_INTERVAL, ...pro
       <Box mt={1} {...props}>
         <GraphWithTooltip
           data={data}
+          containerHeight={containerHeight}
         />
       </Box>
     </ScopedCssBaseline>

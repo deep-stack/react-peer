@@ -10,10 +10,9 @@ const STYLES = {
   }
 }
 
-// TODO: Change height on changing browser window size
-const CONTAINER_HEIGHT = (window.innerHeight / 2) - 40
+const DEFAULT_CONTAINER_HEIGHT = (window.innerHeight / 2) - 40
 
-function GraphWithTooltip ({ data, nodeCharge }) {
+function GraphWithTooltip ({ data, nodeCharge, containerHeight }) {
   const [anchorEl, setAnchorEl] = useState(null)
   const [hoveredNode, setHoveredNode] = useState(null)
 
@@ -26,7 +25,7 @@ function GraphWithTooltip ({ data, nodeCharge }) {
     <Box>
       <ForceDirectedGraph
         data={data}
-        containerHeight={CONTAINER_HEIGHT}
+        containerHeight={containerHeight ?? DEFAULT_CONTAINER_HEIGHT}
         onMouseOverNode={onMouseOverNode}
         onMouseOutNode={() => setAnchorEl(null)}
         nodeCharge={nodeCharge}

@@ -24,7 +24,7 @@
     "convert": "^4.10.0",
     "d3": "^5.5.0",
     "lodash": "^4.17.21",
-    "react-d3-graph": "^2.6.0"
+    "use-resize-observer": "^9.1.0"
   },
   "peerDependencies": {
     "react": "^18.2.0"
