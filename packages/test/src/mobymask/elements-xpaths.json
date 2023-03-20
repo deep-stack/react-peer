@@ -5,15 +5,16 @@
 	"mobyDebugMessagePanelButton": "//button[@data-ref='debug.messages']",
 	"mobyDebugMessages": "//div[@data-ref='debug.subscribed.message']",
 
-	"mobyPhisherInputBox": "//input[@data-ref='phishers.input']",
-	"mobyPhisherAddToBatchButton": "//button[@data-ref='phishers.addBatch']",
-	"mobyPhisherSubmitBatchButton": "//button[@data-ref='phishers.submitBatch']",
+	"mobyPhisherInputBox": "//div[@data-ref='phishers.report']//input[@data-ref='phishers.input']",
+	"mobyPhisherAddToBatchButton": "//div[@data-ref='phishers.report']//button[@data-ref='phishers.addBatch']",
+	"mobyPhisherSubmitBatchButton": "//div[@data-ref='phishers.report']//button[@data-ref='phishers.submitBatch']",
 
-	"mobyMemberInputBox": "//input[@data-ref='members.input']",
-	"mobyMemberAddToBatchButton": "//button[@data-ref='members.addBatch']",
+	"mobyMemberInputBox": "//div[@data-ref='members.endorse']//input[@data-ref='members.input']",
+	"mobyMemberAddToBatchButton": "//div[@data-ref='members.endorse']//button[@data-ref='members.addBatch']",
+	"mobyMemberSubmitBatchButton": "//div[@data-ref='members.endorse']//button[@data-ref='members.submitBatch']",
+
 	"mobyMemberCreateInvite": "//button[@data-ref='member.invite.create']",
 	"mobyMemberRevokeInvite": "//button[@data-ref='member.invite.revoke']",
-	"mobyMemberSubmitBatchButton": "//button[@data-ref='members.submitBatch']",
 	"mobyMemberInviteLink": "//input[@data-ref='member.invite.link']",
 	"mobyMemberDropDown": "//summary[@data-ref='member.invites.show']"
 }

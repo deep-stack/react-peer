@@ -11,7 +11,6 @@
     "test:mobymask": "DEBUG=laconic:* mocha src/peer.test.ts --mobymask"
   },
   "dependencies": {
-    "@cerc-io/peer": "^0.2.29",
     "chai": "^4.3.7",
     "debug": "^4.3.4",
     "dotenv": "^16.0.3",

@@ -40,7 +40,16 @@ window.peer.subscribeTopic('mobymask', (peerId, data) => {
   }
 });`;
 
-const osBrowserCombinations = [
+const seleniumOsBrowserCombinations = [
+  {
+    osName: 'Linux',
+    osVersion: '5.15.0-50-generic',
+    browserName: 'chrome',
+    browserVersion: '110'
+  }
+];
+
+const BStackOsBrowserCombinations = [
   {
     osName: 'Windows',
     osVersion: '11',
@@ -73,14 +82,15 @@ const osBrowserCombinations = [
   }
 ];
 
-export async function setupBrowsers (serverURL: string): Promise<WebDriver[]> {
+export async function setupBrowsers (serverURL: string, USE_BSTACK_GRID: boolean): Promise<WebDriver[]> {
   let peerDrivers: WebDriver[] = [];
   const buildName = `Build-${_getCurrentDateAndTime()}`;
+  const usableOsBrowserCombinations = USE_BSTACK_GRID ? BStackOsBrowserCombinations : seleniumOsBrowserCombinations;
 
   try {
     const peerDriverPromises: Promise<ThenableWebDriver>[] = [];
     for (let i = 0; i < TOTAL_PEERS; i++) {
-      const capabilities = _getBrowserCapabilities(buildName, osBrowserCombinations[i % osBrowserCombinations.length], i);
+      const capabilities = _getBrowserCapabilities(buildName, usableOsBrowserCombinations[i % usableOsBrowserCombinations.length], i);
       peerDriverPromises.push(startABrowserPeer(serverURL, capabilities));
     }
 
@@ -191,6 +201,8 @@ export const closeDebugPanel = async (peerDrivers: WebDriver[]): Promise<void> =
   }));
 };
 
+// Browserstack has custom JavascriptExecutor methods which makes it possible to set session status
+// Refer : https://www.browserstack.com/docs/automate/selenium/set-name-and-status-of-test
 export const markSessionAsFailed = async (peerDrivers: WebDriver[]): Promise<void> => {
   log('Setting the status to failed');
   await Promise.all(peerDrivers.map(async (peerDriver) => {

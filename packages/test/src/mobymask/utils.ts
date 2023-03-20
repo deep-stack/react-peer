@@ -18,7 +18,7 @@ export const getSignedDelegationFromInvite = (inviteLink: string): any => {
   const invitationString = inviteURL.searchParams.get('invitation');
   assert(invitationString != null, `invitationString: ${invitationString}`);
 
-  const signedDelegations = JSON.parse(invitationString);
+  const { signedDelegations } = JSON.parse(invitationString);
   return signedDelegations[signedDelegations.length - 1];
 };
 

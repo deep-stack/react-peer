@@ -1,0 +1,17 @@
+[docker]
+  # Configs have a mapping between the Docker image to use and the capabilities that need to be matched to
+  # start a container with the given image.
+  configs = [
+    "selenium/standalone-chrome:110.0-20230306", '{"browserName":"chrome"}'
+  ]
+
+  # URL for connecting to the docker daemon
+  # This is required in order to allow node-docker and the hub to communicate with each other.
+  # host.docker.internal works for macOS and Windows.
+  # Linux could use --net=host in the `docker run` instruction or 172.17.0.1 in the URI below.
+  # To have Docker listening through tcp on macOS, install socat and run the following command
+  # socat -4 TCP-LISTEN:2375,fork UNIX-CONNECT:/var/run/docker.sock
+  url = "http://127.0.0.1:2375"
+
+  # Docker image used for video recording
+  video-image = "selenium/video:ffmpeg-4.3.1-20230306"

@@ -8,7 +8,7 @@ import {
   MOBYMASK_MESSAGE_KINDS,
   getSignedDelegationFromInvite
 } from './utils';
-import { MESSAGE_ARRIVAL_TIMEOUT, ONE_SECOND } from '../constants';
+import { MESSAGE_ARRIVAL_TIMEOUT } from '../constants';
 import xpaths from './elements-xpaths.json';
 import { closeDebugPanel, navigateURL, openDebugPanel, scrollElementIntoView, waitForMessage } from '../driver-utils';
 
@@ -127,17 +127,17 @@ export async function testMemberEndorsements (reportSender: WebDriver, reportRec
   await closeDebugPanel(reportReceivers);
 }
 
-export async function testInvitation (invitor: WebDriver, invitee: WebDriver, tag: string): Promise<string> {
-  // Create a new invite link with given tag
+export async function testInvitation (invitor: WebDriver, invitee: WebDriver, inviteeName: string): Promise<string> {
+  // Create a new invite link for given inviteeName
   const createInviteButton = await invitor.findElement(webdriver.By.xpath(xpaths.mobyMemberCreateInvite));
   await createInviteButton.click();
 
-  await invitor.wait(until.alertIsPresent(), 3 * ONE_SECOND);
-  await invitor.switchTo().alert().sendKeys(tag);
+  await invitor.wait(until.alertIsPresent(), 5 * 1000); // 5s
+  await invitor.switchTo().alert().sendKeys(inviteeName);
   await invitor.switchTo().alert().accept();
 
   // Wait for confirmation alert
-  await invitor.wait(until.alertIsPresent(), 3 * ONE_SECOND);
+  await invitor.wait(until.alertIsPresent(), 5 * 1000); // 5s
   await invitor.switchTo().alert().accept();
 
   // Click on the dropdown to make links visible
@@ -151,7 +151,7 @@ export async function testInvitation (invitor: WebDriver, invitee: WebDriver, ta
 
   // Let invitee peer navigate to the created invite link
   await navigateURL(invitee, latestLink);
-  expect(invitee.wait(until.elementsLocated(webdriver.By.xpath(xpaths.mobyMemberCreateInvite)), 10 * ONE_SECOND)).to.not.throw;
+  expect(invitee.wait(until.elementsLocated(webdriver.By.xpath(xpaths.mobyMemberCreateInvite)), 10 * 1000)).to.not.throw;
 
   return latestLink;
 }
