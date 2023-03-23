@@ -1,4 +1,4 @@
-
+import fs from 'fs';
 import webdriver, { ThenableWebDriver, WebDriver, logging } from 'selenium-webdriver';
 import debug from 'debug';
 
@@ -42,7 +42,22 @@ window.peer.subscribeTopic('mobymask', (peerId, data) => {
 
 const seleniumOsBrowserCombinations = [
   {
-    osName: 'Linux',
+    osName: 'Windows Server 2019',
+    platformName: 'Windows XP',
+    osVersion: '10.0',
+    browserName: 'chrome',
+    browserVersion: '110'
+  },
+  {
+    osName: 'Windows Server 2019',
+    platformName: 'Windows XP',
+    osVersion: '10.0',
+    browserName: 'chrome',
+    browserVersion: '110'
+  },
+  {
+    osName: 'LINUX',
+    platformName: 'LINUX',
     osVersion: '5.15.0-50-generic',
     browserName: 'chrome',
     browserVersion: '110'
@@ -52,30 +67,35 @@ const seleniumOsBrowserCombinations = [
 const BStackOsBrowserCombinations = [
   {
     osName: 'Windows',
+    platformName: 'WIN11',
     osVersion: '11',
     browserName: 'Chrome',
     browserVersion: '110.0'
   },
   {
     osName: 'OS X',
+    platformName: 'MAC',
     osVersion: 'Monterey',
     browserName: 'Chrome',
     browserVersion: '110.0'
   },
   {
     osName: 'Windows',
+    platformName: 'WIN10',
     osVersion: '10',
     browserName: 'Chrome',
     browserVersion: '110.0'
   },
   {
     osName: 'Windows',
+    platformName: 'WIN11',
     osVersion: '11',
     browserName: 'Chrome',
     browserVersion: '108.0'
   },
   {
     osName: 'OS X',
+    platformName: 'MAC',
     osVersion: 'Monterey',
     browserName: 'Chrome',
     browserVersion: '108.0'
@@ -121,14 +141,18 @@ const startABrowserPeer = async (serverURL: string, capabilities: webdriver.Capa
   }
 
   await navigateURL(driver, appURL);
+  return driver;
+};
 
-  // Wait for the peer node to start
+export const waitForPeerInit = async (peerDrivers: WebDriver[]) => {
   const condition = new webdriver.Condition('peer initialization', (driver) => {
     return driver.executeScript(SCRIPT_PEER_INIT);
   });
-  await driver.wait(condition, NODE_START_TIMEOUT, ERR_PEER_INIT_TIMEOUT, NODE_START_CHECK_INTERVAL);
 
-  return driver;
+  // Wait for the peer node to start
+  await Promise.all(peerDrivers.map(peerDriver => {
+    return peerDriver.wait(condition, NODE_START_TIMEOUT, ERR_PEER_INIT_TIMEOUT, NODE_START_CHECK_INTERVAL);
+  }));
 };
 
 export const navigateURL = async (peerDriver: WebDriver, url: string): Promise<void> => {
@@ -179,6 +203,9 @@ export const getLogs = async (peerDriver: WebDriver): Promise<string[]> => {
 };
 
 export const quitBrowsers = async (peerDrivers: WebDriver[]): Promise<void> => {
+  log('Saving session logs');
+  await _saveSessionLogs(peerDrivers);
+
   log('Stopping all browser instances');
   await Promise.all(peerDrivers.map(peerDriver => peerDriver.quit()));
 };
@@ -225,6 +252,23 @@ export const scrollElementIntoView = async (element : webdriver.WebElement): Pro
   await element.getDriver().executeScript('arguments[0].scrollIntoView(true);', element);
 };
 
+const _saveSessionLogs = async (peerDrivers: WebDriver[]): Promise<void> => {
+  // Create session log directory
+  const sessionDirPath = `./Test-${_getCurrentDateAndTime()}`;
+  if (!fs.existsSync(sessionDirPath)) {
+    fs.mkdirSync(sessionDirPath);
+  }
+
+  await Promise.all(peerDrivers.map(async (peerDriver) => {
+    const sessionCapability = await peerDriver.getCapabilities();
+    const sessionName = sessionCapability.get('bstack:options').sessionName;
+    const logFilePath = `${sessionDirPath}/session-${sessionName}`;
+
+    const logMessages = await getLogs(peerDriver);
+    fs.writeFileSync(logFilePath, JSON.stringify(logMessages, null, '\n'));
+  }));
+};
+
 const _getBrowserCapabilities = (buildName: string, osBrowserCombination: any, index: number): webdriver.Capabilities => {
   const capabilities = {
     'bstack:options': {
@@ -234,7 +278,8 @@ const _getBrowserCapabilities = (buildName: string, osBrowserCombination: any, i
       buildName,
       sessionName: `${index}-${osBrowserCombination.osName}-${osBrowserCombination.browserName}`
     },
-    browserName: osBrowserCombination.browserName
+    browserName: osBrowserCombination.browserName,
+    platformName: osBrowserCombination.platformName
   };
 
   return new webdriver.Capabilities(new Map(Object.entries(capabilities)));

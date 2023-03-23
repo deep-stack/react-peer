@@ -19,7 +19,8 @@ import {
   SCRIPT_GET_PEER_ID,
   setupBrowsers,
   markSessionAsFailed,
-  markSessionAsPassed
+  markSessionAsPassed,
+  waitForPeerInit
 } from './driver-utils';
 import { FLOOD_CHECK_DELAY } from './constants';
 import { testInvitation, testInviteRevocation, testMemberEndorsements, testPhisherReports } from './mobymask/helpers';
@@ -88,6 +89,9 @@ describe('peer-test', () => {
         log('Testing on selenium grid at:', SERVER_URL);
 
         peerDrivers = await setupBrowsers(SERVER_URL, USE_BSTACK_GRID);
+
+        log('Waiting for peer initialization');
+        await waitForPeerInit(peerDrivers);
         peerIds = await Promise.all(peerDrivers.map((peerDriver): Promise<string> => {
           return peerDriver.executeScript(SCRIPT_GET_PEER_ID);
         }));
@@ -294,10 +298,9 @@ function _getArgv (): Arguments {
   }).parseSync();
 }
 
-process.on('SIGINT', async () => {
-  // Quit browser instances
-  await quitBrowsers(peerDrivers);
-
-  log(`Exiting process ${process.pid} with code 0`);
-  process.exit(0);
+process.on('SIGINT', () => {
+  quitBrowsers(peerDrivers).then(() => {
+    log(`Exiting process ${process.pid} with code 0`);
+    process.exit(0);
+  });
 });
